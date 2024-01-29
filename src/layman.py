@@ -166,7 +166,7 @@ class Layman:
     """
 
     def onBinding(self, _, event):
-        # Handle chanined commands one at a time
+        # Handle chained commands one at a time
         command = event.ipc_data["binding"]["command"].strip()
         if "nop layman" in command:
             command = command.replace("nop layman ", '').strip()
@@ -282,7 +282,7 @@ class Layman:
         layoutName = self.options.getForWorkspace(workspace.num, config.KEY_LAYOUT)
         name = self.getLayoutNameByShortName(layoutName)
         self.managers[workspace.num] = getattr(self.userLayouts[name], name)(self.cmdConn, workspace, self.options)
-        self.logCaller("Initialized workspace %d wth %s" % (workspace.num, self.managers[workspace.num].shortName))
+        self.logCaller("Initialized workspace %s with %s" % (workspace.name, self.managers[workspace.num].shortName))
 
         if workspace.num not in self.workspaceWindows:
             self.workspaceWindows[workspace.num] = []
@@ -294,7 +294,7 @@ class Layman:
             if os.path.exists(os.path.dirname(configPath)):
                 shutil.copyfile(os.path.join(os.path.dirname(__file__), 'config.toml'), configPath)
             else:
-                self.logCaller("Path to user config does not exts: %s" % configPath)
+                self.logCaller("Path to user config does not exist: %s" % configPath)
                 exit()
 
 
@@ -338,7 +338,7 @@ class Layman:
         self.eventConn.on(Event.WINDOW_FLOATING, self.windowFloating)
         self.eventConn.on(Event.WORKSPACE_INIT, self.workspaceInit)
 
-      # Set default layout maangers for existing workspaces
+        # Set default layout mangers for existing workspaces
         if self.options.getDefault(config.KEY_LAYOUT):
             for workspace in self.cmdConn.get_workspaces():
                 if not self.isExcluded(workspace):
