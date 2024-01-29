@@ -14,7 +14,7 @@ WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR
 A PARTICULAR PURPOSE. See the GNU General Public License for more details.
 
 You should have received a copy of the GNU General Public License along with
-layman. If not, see <https://www.gnu.org/licenses/>. 
+layman. If not, see <https://www.gnu.org/licenses/>.
 """
 from i3ipc import Event, Connection
 from importlib.machinery import SourceFileLoader
@@ -131,7 +131,7 @@ class Layman:
 
         # Only send windowFloating event if wlm supports it
         if self.managers[workspace.num].supportsFloating:
-             self.dispatchToManager(event, window, workspace) 
+             self.dispatchToManager(event, window, workspace)
              return
 
         # Determine if window is floating
@@ -186,7 +186,7 @@ class Layman:
         # Handle movement commands
         if "move" in command and not self.managers[workspace.num].overridesMoveBinds:
             self.cmdConn.command(command)
-            self.log("Handling bind \"%s\" for workspace %d" % (command, workspace.num))
+            self.log("Handling bind \"%s\" for workspace %s" % (command, workspace.name))
             return
 
         # Handle reload command
@@ -203,15 +203,15 @@ class Layman:
             name = self.getLayoutNameByShortName(shortName)
             layout = getattr(self.userLayouts[name], name)
             self.managers[workspace.num] = layout(self.cmdConn, workspace, self.options)
-            self.log("Created %s on workspace %d" % (shortName, workspace.num))
+            self.log("Created %s on workspace %s" % (shortName, workspace.name))
             return
 
         # Pass unknown command to the appropriate wlm
         if workspace.num not in self.managers:
-            self.log("No manager for workpsace %d, ignoring" % workspace.num)
+            self.log("No manager for workpsace %s, ignoring" % workspace.name)
             return
-            
-        self.log("Calling manager for workspace %d" % workspace.num)
+
+        self.log("Calling manager for workspace %s" % workspace.name)
         self.managers[workspace.num].onBinding(command)
 
 
@@ -226,21 +226,21 @@ class Layman:
         manager = self.managers[workspace.num]
         try:
             if event.change == "new":
-                self.logCaller("Calling windowAdded for workspace %d" % workspace.num)
+                self.logCaller("Calling windowAdded for workspace %s" % workspace.name)
                 self.workspaceWindows[workspace.num].append(window.id)
                 manager.windowAdded(event, window)
             elif event.change == "focus":
-                self.logCaller("Calling windowFocused for workspace %d" % workspace.num)
+                self.logCaller("Calling windowFocused for workspace %s" % workspace.name)
                 manager.windowFocused(event, window)
             elif event.change == "move":
-                self.logCaller("Calling windowMoved for workspace %d" % workspace.num)
+                self.logCaller("Calling windowMoved for workspace %s" % workspace.name)
                 manager.windowMoved(event, window)
             elif event.change == "floating":
-                self.logCaller("Calling windowFloating for workspace %d" % workspace.num)
+                self.logCaller("Calling windowFloating for workspace %s" % workspace.name)
                 manager.windowFloating(event, window)
             elif event.change == "close":
                 try:
-                    self.logCaller("Calling windowRemoved for workspace %d" % workspace.num)
+                    self.logCaller("Calling windowRemoved for workspace %d" % workspace.name)
                     self.workspaceWindows[workspace.num].remove(window.id)
                 except:
                     self.log("Window not tracked in workspace")
@@ -287,12 +287,12 @@ class Layman:
         if workspace.num not in self.workspaceWindows:
             self.workspaceWindows[workspace.num] = []
 
-    
+
     def createConfig(self):
         configPath = utils.getConfigPath()
         if not os.path.exists(configPath):
             if os.path.exists(os.path.dirname(configPath)):
-                shutil.copyfile(os.path.join(os.path.dirname(__file__), 'config.toml'), configPath)            
+                shutil.copyfile(os.path.join(os.path.dirname(__file__), 'config.toml'), configPath)
             else:
                 self.logCaller("Path to user config does not exts: %s" % configPath)
                 exit()
