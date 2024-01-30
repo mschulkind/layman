@@ -21,8 +21,10 @@ import logging
 import os
 import shutil
 from importlib.machinery import SourceFileLoader
+from typing import cast
 
 from i3ipc import Connection, Event, WindowEvent
+from i3ipc.events import IpcBaseEvent
 from setproctitle import setproctitle
 
 from . import config, utils
@@ -46,7 +48,8 @@ class Layman:
     window::new, window::focus, window::close, window::move, and window::floating.
     """
 
-    def windowCreated(self, _, event: WindowEvent):
+    def windowCreated(self, _, event: IpcBaseEvent):
+        event = cast(WindowEvent, event)
         window = utils.findFocusedWindow(self.cmdConn)
         workspace = utils.findFocusedWorkspace(self.cmdConn)
 
@@ -59,7 +62,8 @@ class Layman:
         self.dispatchToManager(event, window, workspace)
 
 
-    def windowFocused(self, _, event: WindowEvent):
+    def windowFocused(self, _, event: IpcBaseEvent):
+        event = cast(WindowEvent, event)
         window = utils.findFocusedWindow(self.cmdConn)
         workspace = utils.findFocusedWorkspace(self.cmdConn)
 
@@ -71,7 +75,8 @@ class Layman:
         # Pass command to the appropriate manager
         self.dispatchToManager(event, window, workspace)
 
-    def windowClosed(self, _, event: WindowEvent):
+    def windowClosed(self, _, event: IpcBaseEvent):
+        event = cast(WindowEvent, event)
         # Try to find workspace by locating where the window is recorded
         workspaces = []
         for num in self.workspaceWindows:
@@ -94,7 +99,8 @@ class Layman:
         self.dispatchToManager(event, window, workspace)
 
 
-    def windowMoved(self, _, event: WindowEvent):
+    def windowMoved(self, _, event: IpcBaseEvent):
+        event = cast(WindowEvent, event)
         window = utils.findFocusedWindow(self.cmdConn)
         workspace = utils.findFocusedWorkspace(self.cmdConn)
 
@@ -117,7 +123,8 @@ class Layman:
                     self.dispatchToManager(event, window, workspace)
 
 
-    def windowFloating(self, _, event: WindowEvent):
+    def windowFloating(self, _, event: IpcBaseEvent):
+        event = cast(WindowEvent, event)
         window = self.cmdConn.get_tree().find_by_id(event.container.id)
         workspace = utils.findFocusedWorkspace(self.cmdConn)
 
