@@ -33,9 +33,9 @@ class MasterStackLayoutManager(WorkspaceLayoutManager):
         self.masterId = 0
         self.stackId = 0
         self.stack = deque([])
-        self.masterWidth = options.getForWorkspace(self.workspaceNum, KEY_MASTER_WIDTH) or 50
-        self.stackLayout = options.getForWorkspace(self.workspaceNum, KEY_STACK_LAYOUT) or "splitv"
-        self.stackSide = options.getForWorkspace(self.workspaceNum, KEY_STACK_SIDE) or "right"
+        self.masterWidth = options.getForWorkspace(self.workspaceName, KEY_MASTER_WIDTH) or 50
+        self.stackLayout = options.getForWorkspace(self.workspaceName, KEY_STACK_LAYOUT) or "splitv"
+        self.stackSide = options.getForWorkspace(self.workspaceName, KEY_STACK_SIDE) or "right"
 
         # If windows exist, fit them into MasterStack
         self.arrangeUntrackedWindows()
@@ -148,7 +148,7 @@ class MasterStackLayoutManager(WorkspaceLayoutManager):
                 else:
                     self.initStack(window)
             else:
-                self.pushMasterToStack(window) 
+                self.pushMasterToStack(window)
         self.setStackSide()
 
 
