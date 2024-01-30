@@ -29,6 +29,10 @@ class WorkspaceLayoutManager:
     overridesMoveBinds = False # Should window movement commands be sent as binds
     supportsFloating = False # Should windowFloating be used, or treated as Added/Removed
 
+    con: i3ipc.Connection
+    workspaceId: int
+    workspaceName: str
+
     # These are the functions you should override to implement a WLM.
     #
     # Parameters:
