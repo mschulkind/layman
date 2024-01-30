@@ -57,10 +57,10 @@ class LaymanConfig():
             return None
 
 
-    def getForWorkspace(self, workspaceNum, key):
+    def getForWorkspace(self, workspaceName: str, key: str):
         # Try to get value for the workspace
         try:
-            value = self.configDict[TABLE_WORKSPACE][str(workspaceNum)][key]
+            value = self.configDict[TABLE_WORKSPACE][workspaceName][key]
         except KeyError:
             # If workspace config doesn't have the key, try output
             output = None

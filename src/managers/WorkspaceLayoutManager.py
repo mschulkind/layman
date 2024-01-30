@@ -38,8 +38,8 @@ class WorkspaceLayoutManager:
     def __init__(self, con: i3ipc.Connection, workspace: i3ipc.WorkspaceReply, options: LaymanConfig):
         self.con = con
         self.workspaceId = workspace.ipc_data["id"]
-        self.workspaceNum = workspace.num
-        self.debug = options.getForWorkspace(self.workspaceNum, KEY_DEBUG)
+        self.workspaceName = workspace.name
+        self.debug = options.getForWorkspace(self.workspaceName, KEY_DEBUG)
 
 
     # windowAdded is called when a new window is added to the workspace,
@@ -80,7 +80,7 @@ class WorkspaceLayoutManager:
     # that are called in response to events.
     def log(self, msg):
         if self.debug:
-            print(("%s %d: %s: %s" % (self.shortName, self.workspaceNum, inspect.stack()[1][3], msg)))
+            print(("%s %s: %s: %s" % (self.shortName, self.workspaceName, inspect.stack()[1][3], msg)))
 
 
     # This log function includes the class name, workspace number, and the
@@ -88,7 +88,7 @@ class WorkspaceLayoutManager:
     # functions that get called by event handlers
     def logCaller(self, msg):
         if self.debug:
-            print(("%s %d: %s: %s" % (self.shortName, self.workspaceNum, inspect.stack()[2][3], msg)))
+            print(("%s %s: %s: %s" % (self.shortName, self.workspaceName, inspect.stack()[2][3], msg)))
 
     # These are some helper functions for getting container ids
     def getWorkspaceCon(self):
