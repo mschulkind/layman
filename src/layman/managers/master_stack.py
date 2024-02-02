@@ -17,7 +17,7 @@ layman. If not, see <https://www.gnu.org/licenses/>.
 """
 from collections import deque
 
-from .WorkspaceLayoutManager import WorkspaceLayoutManager
+from .workspace import WorkspaceLayoutManager
 
 KEY_MASTER_WIDTH = "masterWidth"
 KEY_STACK_LAYOUT = "stackLayout"

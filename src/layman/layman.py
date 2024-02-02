@@ -277,7 +277,7 @@ class Layman:
 
     def getLayoutNameByShortName(self, shortName):
         for name in self.userLayouts:
-            if getattr(self.userLayouts[name], name).shortName == shortName:
+            if self.userLayouts[name].shortName == shortName:
                 return name
 
 
@@ -285,7 +285,7 @@ class Layman:
 
         layoutName = self.options.getForWorkspace(workspace.num, config.KEY_LAYOUT)
         name = self.getLayoutNameByShortName(layoutName)
-        self.managers[workspace.num] = getattr(self.userLayouts[name], name)(self.cmdConn, workspace, self.options)
+        self.managers[workspace.num] = self.userLayouts[name](self.cmdConn, workspace, self.options)
         self.logCaller("Initialized workspace %s with %s" % (workspace.name, self.managers[workspace.num].shortName))
 
         if workspace.num not in self.workspaceWindows:
