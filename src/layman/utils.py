@@ -13,42 +13,43 @@ WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR
 A PARTICULAR PURPOSE. See the GNU General Public License for more details.
 
 You should have received a copy of the GNU General Public License along with
-layman. If not, see <https://www.gnu.org/licenses/>. 
+layman. If not, see <https://www.gnu.org/licenses/>.
 """
 
-from optparse import OptionParser
 import os
+from optparse import OptionParser
+from typing import Optional
+
+from i3ipc import Con, Connection
 
 from . import config
-
-class SimpleDict(dict):
-    def __missing__(self, key):
-        return None
 
 
 def getCommaSeparatedArgs(option, opt, value, parser):
     setattr(parser.values, option.dest, value.split(","))
 
 
-def findFocusedWindow(con):
+def findFocusedWindow(con: Connection) -> Optional[Con]:
     return con.get_tree().find_focused()
 
 
-def findFocusedWorkspace(con):
+def findFocusedWorkspace(con: Connection) -> Optional[Con]:
     window = findFocusedWindow(con)
     return None if window is None else window.workspace()
 
 
 def getConfigPath():
     parser = OptionParser()
-    parser.add_option("-c",
-                      "--config",
-                      dest="configPath",
-                      type="string",
-                      action="callback",
-                      callback=getCommaSeparatedArgs,
-                      metavar=config.CONFIG_PATH,
-                      help="Path to user config file.")
+    parser.add_option(
+        "-c",
+        "--config",
+        dest="configPath",
+        type="string",
+        action="callback",
+        callback=getCommaSeparatedArgs,
+        metavar=config.CONFIG_PATH,
+        help="Path to user config file.",
+    )
 
     try:
         path = parser.parse_args()[0].configPath[0]

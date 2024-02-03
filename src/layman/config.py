@@ -16,7 +16,9 @@ You should have received a copy of the GNU General Public License along with
 layman. If not, see <https://www.gnu.org/licenses/>.
 """
 from logging import exception
+from typing import Optional
 
+import i3ipc
 import tomli
 
 CONFIG_PATH = ".config/layman/config.toml"
@@ -30,25 +32,17 @@ KEY_EXCLUDED_OUTPUTS = "excludeOutputs"
 KEY_LAYOUT = "defaultLayout"
 
 
-class LaymanConfig():
-    def __init__(self, con, configPath):
-        self.reloadConfig(con, configPath)
+class LaymanConfig:
+    def __init__(self, configPath: Optional[str]):
+        self.configDict = self.parse(configPath or CONFIG_PATH)
 
-
-    def parse(self):
-        with open(self.configPath, "rb") as f:
+    def parse(self, configPath: str):
+        with open(configPath, "rb") as f:
             try:
                 return tomli.load(f)
             except Exception as e:
                 exception(e)
                 return {}
-
-
-    def reloadConfig(self, con, configPath):
-        self.configPath = configPath or CONFIG_PATH
-        self.con = con
-        self.configDict = self.parse()
-
 
     def getDefault(self, key):
         try:
@@ -56,27 +50,26 @@ class LaymanConfig():
         except KeyError:
             return None
 
-
-    def getForWorkspace(self, workspaceName: str, key: str):
+    def getForWorkspace(self, workspace: i3ipc.Con, key: str):
         # Try to get value for the workspace
         try:
-            value = self.configDict[TABLE_WORKSPACE][workspaceName][key]
+            return self.configDict[TABLE_WORKSPACE][workspace.name][key]
         except KeyError:
-            # If workspace config doesn't have the key, try output
-            output = None
-            for workspace in self.con.get_workspaces():
-                if workspace.num == workspace.num:
-                    output = workspace.output
-            if output:
-                try:
-                    self.configDict[TABLE_OUTPUT][output][key]
-                except KeyError:
-                    pass
+            pass
 
-            # If output config doesn't have the key, fallback to default
-            try:
-                value = self.configDict[TABLE_LAYMAN][key]
-            except KeyError:
-                value = None
+        # TODO(mschulkind): Remove? Disabled because I'm not sure it makes sense.
+        # If workspace config doesn't have the key, try output
+        #  output = workspace.ipc_data["output"]
+        #  if output:
+        #  try:
+        #  return self.configDict[TABLE_OUTPUT][output][key]
+        #  except KeyError:
+        #  pass
 
-        return value
+        # If output config doesn't have the key, fallback to default
+        try:
+            return self.configDict[TABLE_LAYMAN][key]
+        except KeyError:
+            pass
+
+        return None

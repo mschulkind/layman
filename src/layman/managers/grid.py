@@ -16,14 +16,11 @@ A PARTICULAR PURPOSE. See the GNU General Public License for more details.
 You should have received a copy of the GNU General Public License along with
 layman. If not, see <https://www.gnu.org/licenses/>.
 """
-from .workspace import WorkspaceLayoutManager
+from layman.managers.workspace import WorkspaceLayoutManager
 
 
 class GridLayoutManager(WorkspaceLayoutManager):
     shortName = "Grid"
-
-    def __init__(self, con, workspace, options):
-        super().__init__(con, workspace, options)
 
     def isExcluded(self, window):
         if window is None:
@@ -49,7 +46,6 @@ class GridLayoutManager(WorkspaceLayoutManager):
 
         return False
 
-
     def switchSplit(self, window):
         newLayout = "splitv" if window.rect.height > window.rect.width else "splith"
         result = self.con.command(("[con_id=%d]" % window.id) + newLayout)
@@ -58,20 +54,18 @@ class GridLayoutManager(WorkspaceLayoutManager):
         elif self.debug:
             self.log("Error: Switch failed with err {}".format(result[0].error))
 
-
     def moveWindow(self, moveId, targetId):
         self.con.command("[con_id=%d] mark --add move_target" % targetId)
         self.con.command("[con_id=%d] move window to mark move_target" % moveId)
         self.con.command("[con_id=%d] unmark move_target" % targetId)
         self.logCaller("Moved window %s to mark on window %s" % (moveId, targetId))
 
-
-    def windowAdded(self, event, window):
+    def windowAdded(self, event, workspace, window):
         if self.isExcluded(window):
             return
 
         # Find largest container
-        leaves = self.getWorkspaceCon().leaves()
+        leaves = workspace.leaves()
         largestCon = window.parent
         conSize = window.parent.rect.height + window.parent.rect.width
         for leaf in leaves:
@@ -82,10 +76,15 @@ class GridLayoutManager(WorkspaceLayoutManager):
                 # Split the largest container
                 largestCon = leaf
                 conSize = leaf.rect.height + leaf.rect.width
-            elif largestCon is not None and (leaf.rect.height + leaf.rect.width) == conSize:
+            elif (
+                largestCon is not None
+                and (leaf.rect.height + leaf.rect.width) == conSize
+            ):
                 # If multiple containers are the largest, select left most first and top most second
                 moreLeft = leaf.rect.x < largestCon.rect.x
-                sameLeftHigher = leaf.rect.x == largestCon.rect.x and leaf.rect.y < largestCon.rect.y
+                sameLeftHigher = (
+                    leaf.rect.x == largestCon.rect.x and leaf.rect.y < largestCon.rect.y
+                )
                 if moreLeft or sameLeftHigher:
                     largestCon = leaf
                     conSize = leaf.rect.height + leaf.rect.width
@@ -97,11 +96,8 @@ class GridLayoutManager(WorkspaceLayoutManager):
 
         self.switchSplit(window)
 
-
-    def windowFocused(self, event, window):
+    def windowFocused(self, event, workspace, window):
         if self.isExcluded(window):
             return
 
         self.switchSplit(window)
-
-

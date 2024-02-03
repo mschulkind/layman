@@ -16,9 +16,10 @@ A PARTICULAR PURPOSE. See the GNU General Public License for more details.
 You should have received a copy of the GNU General Public License along with
 layman. If not, see <https://www.gnu.org/licenses/>.
 """
-from .workspace import WorkspaceLayoutManager
+from layman.managers.workspace import WorkspaceLayoutManager
 
 KEY_DEPTH_LIMIT = "depthLimit"
+
 
 # AutolingLayoutManager, adapted from nwg-piotr's autotiling script
 class AutotilingLayoutManager(WorkspaceLayoutManager):
@@ -26,7 +27,7 @@ class AutotilingLayoutManager(WorkspaceLayoutManager):
 
     def __init__(self, con, workspace, options):
         super().__init__(con, workspace, options)
-        self.depthLimit = options.getForWorkspace(self.workspaceNum, KEY_DEPTH_LIMIT) or 0
+        self.depthLimit = options.getForWorkspace(workspace, KEY_DEPTH_LIMIT) or 0
 
     def isExcluded(self, window):
         if window is None:
@@ -83,18 +84,11 @@ class AutotilingLayoutManager(WorkspaceLayoutManager):
             elif self.debug:
                 self.log("Error: Switch failed with err {}".format(result[0].error))
 
-
-    def windowAdded(self, event, window):
+    def windowAdded(self, event, workspace, window):
         self.switchSplit(window)
 
-
-    def windowRemoved(self, event, window):
+    def windowFocused(self, event, workspace, window):
         self.switchSplit(window)
 
-
-    def windowFocused(self, event, window):
-        self.switchSplit(window)
-
-
-    def windowMoved(self, event, window):
+    def windowMoved(self, event, workspace, window):
         self.switchSplit(window)
