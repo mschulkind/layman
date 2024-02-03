@@ -15,27 +15,36 @@ A PARTICULAR PURPOSE. See the GNU General Public License for more details.
 You should have received a copy of the GNU General Public License along with
 layman. If not, see <https://www.gnu.org/licenses/>.
 """
-from os import mkfifo, unlink
+
+
 from queue import SimpleQueue
 from threading import Thread
 
-PIPE = "/tmp/layman.pipe"
+from i3ipc import Connection, Event
+from i3ipc.events import IpcBaseEvent
 
 
-class MessageServer:
+class ListenerThread:
+    def handleEvent(self, _, event: IpcBaseEvent):
+        self.queue.put({"type": "event", "event": event})
+
+    def run(self):
+        self.connection.main()
+
     def __init__(self, queue: SimpleQueue):
         self.queue = queue
+        self.connection = Connection()
 
-        try:
-            unlink(PIPE)
-        except FileNotFoundError:
-            pass
+        for event in [
+            Event.BINDING,
+            Event.WINDOW_FOCUS,
+            Event.WINDOW_NEW,
+            Event.WINDOW_CLOSE,
+            Event.WINDOW_MOVE,
+            Event.WINDOW_FLOATING,
+            Event.WORKSPACE_INIT,
+        ]:
+            self.connection.on(event, self.handleEvent)
 
-        mkfifo(PIPE)
-        thread = Thread(target=self.readPipe, daemon=True)
+        thread = Thread(target=self.run, daemon=True)
         thread.start()
-
-    def readPipe(self):
-        while True:
-            with open(PIPE) as fifo:
-                self.queue.put({"type": "command", "command": fifo.read()})

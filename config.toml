@@ -2,7 +2,7 @@
 # Configure your own desired options before using
 
 # The `layman` section configures options that apply to the layman daemon, and any fallback
-# values for options not set in a [workspace] or [output] section.
+# values for options not set in a [workspace] section.
 [layman]
 defaultLayout = "none"	# The default WLM to assign to a workspace
 excludedWorkspaces = []	# Numbers of workspaces to be excluded
@@ -14,16 +14,6 @@ stackSide = "right"	# MasterStack: Default stack position for all workspaces
 masterWidth = 50		# MasterStack: Default master width for all workspaces
 
 
-# `output` sections configure options for workspaces created on this output.
-[output.DP-1]
-defaultLayout = "none"	# The default WLM to assign to a workspace on this output
-debug = false			# Enable debug messages for WLMs on this output
-depthLimit = 0 			# Autotiling: Depth limit (disabled) for workspaces on this output
-stackLayout = "splitv"	# MasterStack: Default stack layout for workspaces on this output
-stackSide = "right"		# MasterStack: Default stack position for workspaces on this output
-masterWidth = 50		# MasterStack: Default master width for workspaces on this output
-
-
 # `workspace` sections configure options for the specified workspace.
 [workspace.1]
 defaultLayout = "none"	# The default WLM to assign to this workspace
@@ -32,4 +22,3 @@ depthLimit = 0 			# Autotiling: Depth limit (disabled) for this workspace
 stackLayout = "splitv"	# MasterStack: Stack layout for this workspace
 stackSide = "right"		# MasterStack: Stack position for this workspace
 masterWidth = 50		# MasterStack: Master width for this workspaces on this output
-
