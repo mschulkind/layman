@@ -22,6 +22,7 @@ from layman.managers.workspace import WorkspaceLayoutManager
 KEY_MASTER_WIDTH = "masterWidth"
 KEY_STACK_LAYOUT = "stackLayout"
 KEY_STACK_SIDE = "stackSide"
+KEY_DEPTH_LIMIT = "depthLimit"
 
 
 class MasterStackLayoutManager(WorkspaceLayoutManager):
@@ -38,6 +39,7 @@ class MasterStackLayoutManager(WorkspaceLayoutManager):
             options.getForWorkspace(workspace, KEY_STACK_LAYOUT) or "splitv"
         )
         self.stackSide = options.getForWorkspace(workspace, KEY_STACK_SIDE) or "right"
+        self.depthLimit = options.getForWorkspace(workspace, KEY_DEPTH_LIMIT) or 0
 
         # If windows exist, fit them into MasterStack
         self.arrangeUntrackedWindows()
@@ -81,9 +83,49 @@ class MasterStackLayoutManager(WorkspaceLayoutManager):
             self.moveUp()
         elif command == "move down":
             self.moveDown()
-        elif command == "rotate ccw" or command == "move left":
+        elif command == "move right":
+            focusedWindow = self.getFocusedCon()
+            if not focusedWindow:
+                return
+            # swap with master if direction is correct
+            if (
+                focusedWindow.id == self.masterId
+                and self.stackSide == "right"
+                or (
+                    focusedWindow.id != self.masterId
+                    and self.stackSide == "left"
+                    and self.stackLayout == "splitv"
+                )
+            ):
+                self.swapMaster()
+            elif self.stackLayout == "splith" and focusedWindow.id != self.masterId:
+                if self.stackSide == "left":
+                    self.moveUp()
+                elif self.stackSide == "right":
+                    self.moveDown()
+        elif command == "move left":
+            focusedWindow = self.getFocusedCon()
+            if not focusedWindow:
+                return
+            # swap with master if direction is correct
+            if (
+                focusedWindow.id == self.masterId
+                and self.stackSide == "left"
+                or (
+                    focusedWindow.id != self.masterId
+                    and self.stackSide == "right"
+                    and self.stackLayout == "splitv"
+                )
+            ):
+                self.swapMaster()
+            elif self.stackLayout == "splith" and focusedWindow.id != self.masterId:
+                if self.stackSide == "left":
+                    self.moveDown()
+                elif self.stackSide == "right":
+                    self.moveUp()
+        elif command == "rotate ccw":
             self.rotateCCW()
-        elif command == "rotate cw" or command == "move right":
+        elif command == "rotate cw":
             self.rotateCW()
         elif command == "swap master":
             self.swapMaster()
@@ -147,7 +189,7 @@ class MasterStackLayoutManager(WorkspaceLayoutManager):
         ]
         for window in untracked:
             if self.stackId == 0:
-                if self.masterId == 0:
+                if not self.getConById(self.masterId) or self.masterId == 0:
                     self.initMaster(window)
                 else:
                     self.initStack(window)
@@ -179,6 +221,7 @@ class MasterStackLayoutManager(WorkspaceLayoutManager):
         self.moveWindow(self.masterId, self.stackId)
         self.moveToTopOfStack(self.masterId)
         self.masterId = window.id
+        self.updateSubStack()
 
     def pushWindow(self, window, topCon):
         leaves = topCon.leaves()
@@ -210,9 +253,17 @@ class MasterStackLayoutManager(WorkspaceLayoutManager):
         # The top of a tabbed layout is the closest to master, handle that
         moveDirection = "up"
         topIndex = 0
-        if self.stackLayout == "tabbed" and self.stackSide == "right":
+        if (
+            (self.stackLayout == "tabbed" and self.stackSide == "right")
+            or self.stackLayout == "splith"
+            and self.stackSide == "right"
+        ):
             moveDirection = "left"
-        elif self.stackLayout == "tabbed" and self.stackSide == "left":
+        elif (
+            (self.stackLayout == "tabbed" and self.stackSide == "left")
+            or self.stackLayout == "splith"
+            and self.stackSide == "left"
+        ):
             moveDirection = "right"
             topIndex = -1
 
@@ -231,6 +282,51 @@ class MasterStackLayoutManager(WorkspaceLayoutManager):
             if stackCon.id != self.stackId:
                 self.moveWindow(windowId, self.stackId)
                 stackCon = self.getConById(self.stackId)
+
+    def updateSubStack(self):
+        if self.stackLayout != "splitv" and self.stackLayout != "splith":
+            return
+        moveDirection = "down"
+        moveRedirection = "up"
+        if self.stackLayout == "splith":
+            moveDirection = self.stackSide
+            moveRedirection = "right" if self.stackSide == "left" else "left"
+        lastCon = self.getConById(self.stack[0]).parent
+        focusedWindow = self.getFocusedCon()
+        if (
+            lastCon.id == self.stackId
+            and len(self.stack) > self.depthLimit
+            and self.depthLimit >= 1
+        ):
+            # if not yet created and depthLimit reached, create second stack
+            self.con.command(
+                "[con_id=%d] split vertical, layout stacking" % self.stack[0]
+            )
+            self.con.command("[con_id=%d] move %s" % (self.stack[1], moveDirection))
+        elif lastCon.id != self.stackId:
+            numLast = len(lastCon.leaves())
+            numFirst = len(self.stack) - numLast
+            if numFirst > (self.depthLimit - 1):
+                # if first stack number is higher than the maximum allowed, put lowest one in second stack
+                self.con.command(
+                    "[con_id=%d] move %s" % (self.stack[numLast], moveDirection)
+                )
+            elif numFirst < (self.depthLimit - 1):
+                # if first stack number is lower than the maximum allowed, pop one from second stack
+                self.con.command(
+                    "[con_id=%d] move %s" % (self.stack[numLast - 1], moveRedirection)
+                )
+                if numLast == 2:
+                    # Remove also last window from SubStack if only two windows were in it
+                    self.con.command(
+                        "[con_id=%d] move %s" % (self.stack[0], moveRedirection)
+                    )
+            elif numLast == 1:
+                self.con.command(
+                    "[con_id=%d] move %s" % (self.stack[0], moveRedirection)
+                )
+
+        self.con.command("[con_id=%d] focus" % focusedWindow.id)
 
     def popFromStack(self, windowId, leaves):
         # Master destroyed, pop from stack
@@ -277,6 +373,8 @@ class MasterStackLayoutManager(WorkspaceLayoutManager):
             # Master destroyed, pop from stack
             newMaster = self.stack.pop()
             self.popFromStack(newMaster, leaves)
+            if len(self.stack) > 0:
+                self.updateSubStack()
         elif len(topCon.nodes) == 1 and len(leaves) > 1:
             # Layout is wrapped in another container, recurse
             self.popWindow(window, topCon.nodes[0])
@@ -287,6 +385,7 @@ class MasterStackLayoutManager(WorkspaceLayoutManager):
             for id in self.stack:
                 if id not in allWindowIds:
                     self.stack.remove(id)
+                    self.updateSubStack()
                     break
 
     def toggleStackLayout(self):
@@ -378,16 +477,13 @@ class MasterStackLayoutManager(WorkspaceLayoutManager):
 
         # Swap with top of stack if master is focused
         if focusedWindow.id == self.masterId:
+            targetId = self.stack.pop()
             self.con.command(
-                "[con_id=%d] swap container with con_id %d"
-                % (focusedWindow.id, self.stack[-1])
+                "[con_id=%d] swap container with con_id %d" % (targetId, self.masterId)
             )
-            self.masterId = self.stack.pop()
-            self.stack.append(focusedWindow.id)
-            self.log(
-                "Swapped master %d with top of stack %d"
-                % (self.stack[-1], self.masterId)
-            )
+            self.stack.append(self.masterId)
+            self.masterId = targetId
+            self.log("Swapped window %d with master" % targetId)
             return
 
         # Swap window with window below
@@ -406,9 +502,15 @@ class MasterStackLayoutManager(WorkspaceLayoutManager):
         self.log("Swapped window %d with %d" % (focusedWindow.id, self.stack[index]))
 
     def rotateCCW(self):
-        # Exit if less than three windows
+        # Swap master and top of stack if only two windows
         if len(self.stack) < 2:
-            self.log("Only 2 windows, can't rotate")
+            targetId = self.stack.pop()
+            self.con.command(
+                "[con_id=%d] swap container with con_id %d" % (targetId, self.masterId)
+            )
+            self.stack.append(self.masterId)
+            self.masterId = targetId
+            self.log("Swapped window %d with master" % targetId)
             return
 
         # Swap top of stack with master, then move old master to bottom
@@ -426,11 +528,18 @@ class MasterStackLayoutManager(WorkspaceLayoutManager):
         # Update record
         self.masterId = newMasterId
         self.stack.appendleft(prevMasterId)
+        self.updateSubStack()
 
     def rotateCW(self):
-        # Exit if less than three windows
+        # Swap master and top of stack if only two windows
         if len(self.stack) < 2:
-            self.log("Only 2 windows, can't rotate")
+            targetId = self.stack.pop()
+            self.con.command(
+                "[con_id=%d] swap container with con_id %d" % (targetId, self.masterId)
+            )
+            self.stack.append(self.masterId)
+            self.masterId = targetId
+            self.log("Swapped window %d with master" % targetId)
             return
 
         # Swap bottom of stack with master, then move old master to top
@@ -453,6 +562,7 @@ class MasterStackLayoutManager(WorkspaceLayoutManager):
         # Update record
         self.masterId = newMasterId
         self.stack.append(prevMasterId)
+        self.updateSubStack()
 
     def swapMaster(self):
         # Exit if less than two windows
