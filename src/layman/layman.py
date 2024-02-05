@@ -56,6 +56,9 @@ def layoutManagerReloader(layman: "Layman", workspace: Con):
         yield None
     except BaseException as e:
         logging.exception(e)
+        layman.log(
+            f"Reloading layout manager for workspace {workspace.name} after exception"
+        )
         layman.setWorkspaceLayoutManager(workspace)
 
 
