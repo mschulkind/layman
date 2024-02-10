@@ -91,6 +91,16 @@ class WorkspaceLayoutManager:
     def onCommand(self, command: str, workspace: i3ipc.Con):
         pass
 
+    # command is used by the layout manager itself to run commands.
+    def command(self, command: str):
+        self.logCaller(f"Running command: {command}")
+        results = self.con.command(command)
+        for result in results:
+            if result.success:
+                self.logCaller("Command succeeded.")
+            else:
+                self.logCaller(f"Command failed: {result.error}")
+
     # This log function includes the class name, workspace number, and the
     # name of the function it is called by. This makes it useful for functions
     # that are called in response to events.
@@ -102,6 +112,15 @@ class WorkspaceLayoutManager:
                     % (self.shortName, self.workspaceName, inspect.stack()[1][3], msg)
                 )
             )
+
+    # Same as log(), but prints in non-debug as well.
+    def logError(self, msg):
+        print(
+            (
+                "%s %s: %s: %s"
+                % (self.shortName, self.workspaceName, inspect.stack()[1][3], msg)
+            )
+        )
 
     # This log function includes the class name, workspace number, and the
     # name of the function 2 calls up. This makes it useful for helper
