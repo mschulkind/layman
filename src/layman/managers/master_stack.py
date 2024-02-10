@@ -15,8 +15,10 @@ A PARTICULAR PURPOSE. See the GNU General Public License for more details.
 You should have received a copy of the GNU General Public License along with
 layman. If not, see <https://www.gnu.org/licenses/>.
 """
-from collections import deque
+from enum import Enum
+from typing import Optional
 
+from i3ipc import Con
 from layman.managers.workspace import WorkspaceLayoutManager
 
 KEY_MASTER_WIDTH = "masterWidth"
@@ -25,594 +27,498 @@ KEY_STACK_SIDE = "stackSide"
 KEY_DEPTH_LIMIT = "depthLimit"
 
 
+class StackLayout(Enum):
+    SPLITV = 1
+    SPLITH = 2
+    STACKING = 3
+    TABBED = 4
+
+    def nextChoice(self):
+        if self == StackLayout.SPLITV:
+            return StackLayout.SPLITH
+        elif self == StackLayout.SPLITH:
+            return StackLayout.STACKING
+        elif self == StackLayout.STACKING:
+            return StackLayout.TABBED
+        else:  # self == StackLayout.TABBED
+            return StackLayout.SPLITV
+
+
+class Side(Enum):
+    RIGHT = 1
+    LEFT = 2
+
+    def opposite(self):
+        if self == Side.LEFT:
+            return Side.RIGHT
+        else:
+            return Side.LEFT
+
+    def __str__(self):
+        if self == self.RIGHT:
+            return "right"
+        else:
+            return "left"
+
+
 class MasterStackLayoutManager(WorkspaceLayoutManager):
     shortName = "MasterStack"
     overridesMoveBinds = True
 
+    windowIds: list[int]
+
+    masterWidth: int
+    stackLayout: StackLayout
+    stackSide: Side
+    depthLimit: int
+    substackExists: bool
+    lastFocusedWindowId: Optional[int]
+
     def __init__(self, con, workspace, options):
         super().__init__(con, workspace, options)
-        self.masterId = 0
-        self.stackId = 0
-        self.stack = deque([])
+        # A list of all window IDs in the workspace, with the first ID being the master and the
+        # rest being the stack.
+        self.windowIds = []
         self.masterWidth = options.getForWorkspace(workspace, KEY_MASTER_WIDTH) or 50
-        self.stackLayout = (
+        self.substackExists = False
+        self.lastFocusedWindowId = None
+
+        stackLayoutStr = (
             options.getForWorkspace(workspace, KEY_STACK_LAYOUT) or "splitv"
         )
-        self.stackSide = options.getForWorkspace(workspace, KEY_STACK_SIDE) or "right"
+
+        try:
+            self.stackLayout = StackLayout[stackLayoutStr.upper()]
+        except KeyError:
+            self.logError(f"Invalid stack layout {stackLayoutStr}")
+
+        stackSideStr = options.getForWorkspace(workspace, KEY_STACK_SIDE) or "right"
+        try:
+            self.stackSide = Side[stackSideStr.upper()]
+        except KeyError:
+            self.logError(f"Invalid stack side {stackSideStr}")
+
         self.depthLimit = options.getForWorkspace(workspace, KEY_DEPTH_LIMIT) or 0
+        if self.depthLimit == 1:
+            self.logError(f"If enabled, depthLimit must be greater than 1.")
+            self.depthLimit = 0
 
         # If windows exist, fit them into MasterStack
-        self.arrangeUntrackedWindows()
+        self.arrangeWindows(workspace)
 
     def windowAdded(self, event, workspace, window):
         # Ignore excluded windows
         if self.isExcluded(window):
             return
 
-        # Don't add duplicate windows
-        if window.id == self.masterId or window.id in self.stack:
-            return
-
-        topCon = self.getWorkspaceCon()
-        self.pushWindow(window, topCon)
+        self.pushWindow(workspace, window)
 
         self.log("Added window id: %d" % window.id)
-        self.con.command("[con_id=%d] focus" % self.masterId)
 
     def windowRemoved(self, event, workspace, window):
         # Ignore excluded windows
         if self.isExcluded(window):
             return
 
-        topCon = self.getWorkspaceCon()
-        self.popWindow(window, topCon)
-
-        self.log("Removed window id: %d" % window.id)
+        self.popWindow(workspace, window)
 
     def windowFocused(self, event, workspace, window):
         # Ignore excluded windows
         if self.isExcluded(window):
             return
 
-        # Make sure the focused window is visible
-        if self.stackLayout != "splitv" and window.id in self.stack:
-            self.con.command("focus child")
+        self.lastFocusedWindowId = window.id
 
     def onCommand(self, command, workspace):
+        self.log(f"received command '{command}' with window ids {self.windowIds}")
+
+        focused = workspace.find_focused()
+        if not focused:
+            self.log("no focused window, ignoring")
+            return
+        assert focused.id in self.windowIds
+
         if command == "move up":
-            self.moveUp()
+            self.moveWindowRelative(focused, -1)
         elif command == "move down":
-            self.moveDown()
+            self.moveWindowRelative(focused, 1)
         elif command == "move right":
-            focusedWindow = self.getFocusedCon()
-            if not focusedWindow:
-                return
-            # swap with master if direction is correct
-            if (
-                focusedWindow.id == self.masterId
-                and self.stackSide == "right"
-                or (
-                    focusedWindow.id != self.masterId
-                    and self.stackSide == "left"
-                    and self.stackLayout == "splitv"
-                )
-            ):
-                self.swapMaster()
-            elif self.stackLayout == "splith" and focusedWindow.id != self.masterId:
-                if self.stackSide == "left":
-                    self.moveUp()
-                elif self.stackSide == "right":
-                    self.moveDown()
+            self.moveWindowHorizontally(workspace, focused, Side.RIGHT)
         elif command == "move left":
-            focusedWindow = self.getFocusedCon()
-            if not focusedWindow:
-                return
-            # swap with master if direction is correct
-            if (
-                focusedWindow.id == self.masterId
-                and self.stackSide == "left"
-                or (
-                    focusedWindow.id != self.masterId
-                    and self.stackSide == "right"
-                    and self.stackLayout == "splitv"
-                )
-            ):
-                self.swapMaster()
-            elif self.stackLayout == "splith" and focusedWindow.id != self.masterId:
-                if self.stackSide == "left":
-                    self.moveDown()
-                elif self.stackSide == "right":
-                    self.moveUp()
+            self.moveWindowHorizontally(workspace, focused, Side.LEFT)
         elif command == "rotate ccw":
-            self.rotateCCW()
+            self.rotateWindows(workspace, "ccw")
         elif command == "rotate cw":
-            self.rotateCW()
+            self.rotateWindows(workspace, "cw")
         elif command == "swap master":
-            self.swapMaster()
+            master = workspace.find_by_id(self.windowIds[0])
+            assert master
+            self.swapWindows(focused, master)
         elif command == "stack toggle":
             self.toggleStackLayout()
         elif command == "stackside toggle":
-            self.toggleStackSide()
+            self.toggleStackSide(workspace)
+        elif command == "focus master":
+            self.command(f"[con_id={self.windowIds[0]}] focus")
 
     def isExcluded(self, window):
-        if window is None:
-            return True
-
-        if window.type != "con":
-            return True
-
-        workspace = window.workspace()
-
-        if workspace is None:
-            return True
-
         if window.floating is not None and "on" in window.floating:
-            return True
-
-        if workspace.floating_nodes is not None and any(
-            node.id == window.id for node in workspace.floating_nodes
-        ):
             return True
 
         return False
 
     def setMasterWidth(self):
-        if self.masterWidth is not None:
-            self.con.command(
-                "[con_id=%s] resize set width %s ppt"
-                % (self.masterId, self.masterWidth)
+        if self.masterWidth is not None and self.windowIds:
+            masterId = self.windowIds[0]
+            self.command(f"[con_id={masterId}] resize set width {self.masterWidth} ppt")
+            self.logCaller(f"Set window {masterId} width to {self.masterWidth}")
+
+    def moveWindowCommand(self, moveId: int, targetId: int):
+        self.command(f"[con_id={targetId}] mark --add move_target")
+        self.command(f"[con_id={moveId}] move window to mark move_target")
+        self.command(f"[con_id={targetId}] unmark move_target")
+        self.logCaller(f"Moved window {moveId} to mark on window {targetId}")
+
+    def swapWindowsCommand(self, firstWindowId: int, secondWindowId: int):
+        self.command(
+            f"[con_id={firstWindowId}] swap container with con_id {secondWindowId}"
+        )
+
+    def removeExtraNesting(self, workspace: Con):
+        master = self.con.get_tree().find_by_id(self.windowIds[0])
+        if not master:
+            self.log("Something probably went wrong in arrangeWindows")
+            return
+        masterParent = master.parent
+        assert masterParent
+        self.command(f"[con_id={masterParent.id}] split none")
+
+    def arrangeWindows(self, workspace):
+        windows = workspace.leaves()
+        if not windows:
+            return
+
+        self.log("Arranging windows")
+        self.windowIds.clear()
+        previousWindow = None
+        for window in windows:
+            self.pushWindow(workspace, window, previousWindow)
+            previousWindow = window
+
+        self.removeExtraNesting(workspace)
+
+    def pushWindow(
+        self, workspace: Con, window: Con, positionAfter: Optional[Con] = None
+    ):
+        positionAtIndex: int = 0
+        if positionAfter:
+            positionAfterIndex = self.getWindowListIndex(positionAfter)
+            if positionAfterIndex is None:
+                self.log(
+                    f"Window {positionAfter.id} to positionAfter not found in windowIds."
+                )
+            else:
+                positionAtIndex = positionAfterIndex + 1
+        else:
+            if self.lastFocusedWindowId:
+                lastFocusedWindow = workspace.find_by_id(self.lastFocusedWindowId)
+                if lastFocusedWindow is None:
+                    self.log(
+                        f"Last focused window {self.lastFocusedWindowId} not found."
+                    )
+                else:
+                    lastFocusedIndex = self.getWindowListIndex(lastFocusedWindow)
+                    if lastFocusedIndex is None:
+                        self.log(
+                            f"Last focused window {self.lastFocusedWindowId} not found in windowIds."
+                        )
+                    else:
+                        positionAtIndex = lastFocusedIndex
+
+        if len(self.windowIds) == 0:
+            self.log("Too few windows to arrange")
+        elif len(self.windowIds) == 1:
+            # We have 2 windows now, so we create the master and the stack.
+
+            if positionAtIndex == 0:
+                masterId = window.id
+                firstStackId = self.windowIds[0]
+            else:
+                masterId = self.windowIds[0]
+                firstStackId = window.id
+
+            if self.stackSide == Side.LEFT:
+                self.command(f"[con_id={firstStackId}] splith")
+                self.moveWindowCommand(masterId, firstStackId)
+            else:
+                self.command(f"[con_id={masterId}] splith")
+                self.moveWindowCommand(firstStackId, masterId)
+
+            self.command(f"[con_id={firstStackId}] splitv")
+        else:
+            if positionAtIndex == 0:  # New master
+                self.swapWindowsCommand(window.id, self.windowIds[0])
+                self.moveWindowCommand(self.windowIds[0], self.windowIds[1])
+                self.swapWindowsCommand(self.windowIds[0], self.windowIds[1])
+            elif positionAtIndex == 1 or (
+                self.substackExists and positionAtIndex == self.depthLimit
+            ):
+                # New first stack or first substack
+                self.moveWindowCommand(window.id, self.windowIds[positionAtIndex])
+                self.swapWindowsCommand(window.id, self.windowIds[positionAtIndex])
+
+            else:
+                self.moveWindowCommand(window.id, self.windowIds[positionAtIndex - 1])
+
+        # If it was a new visible stack window and we have a substack, we need to demote a window
+        # into the substack.
+        if self.substackExists and positionAtIndex < self.depthLimit:
+            lastVisibleStack = self.windowIds[self.depthLimit - 1]
+            firstSubstack = self.windowIds[self.depthLimit]
+            self.moveWindowCommand(lastVisibleStack, firstSubstack)
+            self.swapWindowsCommand(lastVisibleStack, firstSubstack)
+
+        self.windowIds.insert(positionAtIndex, window.id)
+        self.log(f"window ids: {self.windowIds}")
+        self.createSubstackIfNeeded()
+        if len(self.windowIds) == 2:
+            # If we now have two window IDs, then we just created the master and stack and need to
+            # adjust them.
+            self.setStackLayout()
+            self.setMasterWidth()
+            self.removeExtraNesting(workspace)
+
+    def popWindow(self, workspace: Con, window: Con):
+        self.log(f"Removing window id: {window.id}")
+        sourceIndex = self.getWindowListIndex(window)
+        if sourceIndex is None:
+            self.log("Window not found in window list. This is probably a bug.")
+            return
+
+        self.windowIds.remove(window.id)
+        self.log(f"window ids: {self.windowIds}")
+
+        if sourceIndex == 0:
+            # Master was removed.
+            self.command(
+                f"[con_id={self.windowIds[0]}] move {self.stackSide.opposite()}"
             )
-            self.logCaller(
-                "Set window %d width to %d" % (self.masterId, self.masterWidth)
-            )
+            self.setMasterWidth()
+
+        if self.substackExists:
+            # We need to rebalance the visible stack and the substack if a window was removed from
+            # the visible stack or master.
+            if sourceIndex < self.depthLimit:
+                # A visible stack window is being removed, so we need to promote a window from the
+                # substack.
+                lastVisibleStack = self.windowIds[self.depthLimit - 2]
+                firstSubstack = self.windowIds[self.depthLimit - 1]
+                self.moveWindowCommand(firstSubstack, lastVisibleStack)
+
+            if not self.shouldSubstackExist():
+                self.destroySubstackIfExists()
+
+    def shouldSubstackExist(self):
+        return (
+            self.stackLayout == StackLayout.SPLITV
+            and self.depthLimit > 0
+            and len(self.windowIds) > (self.depthLimit + 1)
+        )
 
     def setStackLayout(self):
-        if len(self.stack) != 0 and self.stackId != 0:
-            self.con.command("[con_id=%d] layout %s" % (self.stackId, self.stackLayout))
-
-    def moveWindow(self, moveId, targetId):
-        self.con.command("[con_id=%d] mark --add move_target" % targetId)
-        self.con.command("[con_id=%d] move window to mark move_target" % moveId)
-        self.con.command("[con_id=%d] unmark move_target" % targetId)
-        self.logCaller("Moved window %s to mark on window %s" % (moveId, targetId))
-
-    def arrangeUntrackedWindows(self):
-        leaves = self.getWorkspaceCon().leaves()
-        if len(leaves) == 0:
-            return
-
-        self.log("Arranging untrackedWindows")
-        untracked = [
-            x
-            for x in reversed(leaves)
-            if x.id not in self.stack and x.id != self.masterId
-        ]
-        for window in untracked:
-            if self.stackId == 0:
-                if not self.getConById(self.masterId) or self.masterId == 0:
-                    self.initMaster(window)
-                else:
-                    self.initStack(window)
-            else:
-                self.pushMasterToStack(window)
-        self.setStackSide()
-
-    def initMaster(self, window):
-        self.masterId = window.id
-        self.con.command(
-            "[con_id=%d] split none, layout %s" % (self.masterId, "splith")
-        )
-
-    def initStack(self, window):
-        self.con.command("[con_id=%d] split none, layout splith" % self.masterId)
-        self.moveWindow(window.id, self.masterId)
-        self.con.command(
-            "[con_id=%d] split vertical, layout %s" % (self.masterId, self.stackLayout)
-        )
-        self.stack.append(self.masterId)
-        self.stackId = self.getConById(self.masterId).parent.id
-        self.masterId = window.id
-        self.setStackSide()
-
-    def pushMasterToStack(self, window):
-        self.con.command("[con_id=%d] split none, layout splith" % self.masterId)
-        self.moveWindow(window.id, self.masterId)
-        self.stack.append(self.masterId)
-        self.moveWindow(self.masterId, self.stackId)
-        self.moveToTopOfStack(self.masterId)
-        self.masterId = window.id
-        self.updateSubStack()
-
-    def pushWindow(self, window, topCon):
-        leaves = topCon.leaves()
-        masterCon = topCon.find_by_id(self.masterId)
-        stackCon = topCon.find_by_id(self.stackId)
-        if stackCon is None:
-            if masterCon is None:
-                if len(leaves) > 0:
-                    # Something's not right, I can feel it
-                    self.arrangeUntrackedWindows()
-                elif len(leaves) > -1:
-                    # Only one window exists, make it master
-                    self.initMaster(window)
-            else:
-                # Only two windows, initialize stack.
-                self.initStack(window)
-        elif masterCon is None:
-            # No master, even though we have a stack for some reason.
-            self.popFromStack(window.id, leaves)
-            self.masterId = window.id
-        elif len(topCon.nodes) == 1 and len(leaves) > 1:
-            # Layout is wrapped in another container, recurse
-            self.pushWindow(window, topCon.nodes[0])
-        else:
-            self.pushMasterToStack(window)
-            self.setMasterWidth()
-
-    def moveToTopOfStack(self, windowId):
-        # The top of a tabbed layout is the closest to master, handle that
-        moveDirection = "up"
-        topIndex = 0
-        if (
-            (self.stackLayout == "tabbed" and self.stackSide == "right")
-            or self.stackLayout == "splith"
-            and self.stackSide == "right"
-        ):
-            moveDirection = "left"
-        elif (
-            (self.stackLayout == "tabbed" and self.stackSide == "left")
-            or self.stackLayout == "splith"
-            and self.stackSide == "left"
-        ):
-            moveDirection = "right"
-            topIndex = -1
-
-        # Get stack container
-        try:
-            stackCon = self.getConById(windowId).parent
-        except AttributeError:
-            # Window not in stack
-            self.moveWindow(windowId, self.stack[0])
-            stackCon = self.getConById(windowId).parent
-
-        # Move the previous master to top of stack
-        while stackCon is not None and stackCon.nodes[topIndex].id != windowId:
-            self.con.command("[con_id=%d] move %s" % (windowId, moveDirection))
-            stackCon = self.getConById(windowId).parent
-            if stackCon.id != self.stackId:
-                self.moveWindow(windowId, self.stackId)
-                stackCon = self.getConById(self.stackId)
-
-    def updateSubStack(self):
-        if self.stackLayout != "splitv" and self.stackLayout != "splith":
-            return
-        moveDirection = "down"
-        moveRedirection = "up"
-        if self.stackLayout == "splith":
-            moveDirection = self.stackSide
-            moveRedirection = "right" if self.stackSide == "left" else "left"
-        lastCon = self.getConById(self.stack[0]).parent
-        focusedWindow = self.getFocusedCon()
-        if (
-            lastCon.id == self.stackId
-            and len(self.stack) > self.depthLimit
-            and self.depthLimit >= 1
-        ):
-            # if not yet created and depthLimit reached, create second stack
-            self.con.command(
-                "[con_id=%d] split vertical, layout stacking" % self.stack[0]
+        if len(self.windowIds) > 1:
+            self.command(
+                f"[con_id={self.windowIds[1]}] layout {self.stackLayout.name.lower()}"
             )
-            self.con.command("[con_id=%d] move %s" % (self.stack[1], moveDirection))
-        elif lastCon.id != self.stackId:
-            numLast = len(lastCon.leaves())
-            numFirst = len(self.stack) - numLast
-            if numFirst > (self.depthLimit - 1):
-                # if first stack number is higher than the maximum allowed, put lowest one in second stack
-                self.con.command(
-                    "[con_id=%d] move %s" % (self.stack[numLast], moveDirection)
-                )
-            elif numFirst < (self.depthLimit - 1):
-                # if first stack number is lower than the maximum allowed, pop one from second stack
-                self.con.command(
-                    "[con_id=%d] move %s" % (self.stack[numLast - 1], moveRedirection)
-                )
-                if numLast == 2:
-                    # Remove also last window from SubStack if only two windows were in it
-                    self.con.command(
-                        "[con_id=%d] move %s" % (self.stack[0], moveRedirection)
-                    )
-            elif numLast == 1:
-                self.con.command(
-                    "[con_id=%d] move %s" % (self.stack[0], moveRedirection)
-                )
+            self.log(f"Changed stackLayout to {self.stackLayout.name.lower()}")
 
-        self.con.command("[con_id=%d] focus" % focusedWindow.id)
+    def createSubstackIfNeeded(self):
+        if self.shouldSubstackExist() and not self.substackExists:
+            firstSubstack = self.windowIds[self.depthLimit]
+            self.command(f"[con_id={firstSubstack}] splitv, layout stacking")
+            for windowId in reversed(self.windowIds[self.depthLimit + 1 :]):
+                self.moveWindowCommand(windowId, firstSubstack)
 
-    def popFromStack(self, windowId, leaves):
-        # Master destroyed, pop from stack
-        self.masterId = windowId
-        self.log("Master removed, popping %d from stack." % self.masterId)
-        if len(leaves) == 1:
-            # Stack empty, make last window master
-            self.con.command("[con_id=%d] layout splith" % self.masterId)
-            self.moveWindow(self.masterId, self.workspaceId)
-            self.stack.clear()
-            self.stackId = 0
-        else:
-            moveDirection = "left" if self.stackSide == "right" else "right"
-            try:
-                while self.getConById(self.masterId).parent.id == self.stackId:
-                    self.con.command(
-                        "[con_id=%d] move %s" % (self.masterId, moveDirection)
-                    )
-            except AttributeError:
-                self.log("New master %d moved out of stack" % self.masterId)
-        self.setMasterWidth()
+            self.substackExists = True
 
-    def popWindow(self, window, topCon):
-        leaves = topCon.leaves()
-        masterCon = topCon.find_by_id(self.masterId)
-        stackCon = topCon.find_by_id(self.stackId)
-        if stackCon is None:
-            if masterCon is None:
-                if len(leaves) > 0:
-                    # Something's not right, I can feel it
-                    self.arrangeUntrackedWindows()
-                else:
-                    # No windows, clear everything
-                    self.stack.clear()
-                    self.stackId = 0
-                    self.masterId = 0
-            else:
-                # Only one window remains
-                self.log("Single window, making it master.")
-                self.masterId = topCon.nodes[0].id
-                self.stackId = 0
-                self.stack.clear()
-        elif masterCon is None:
-            # Master destroyed, pop from stack
-            newMaster = self.stack.pop()
-            self.popFromStack(newMaster, leaves)
-            if len(self.stack) > 0:
-                self.updateSubStack()
-        elif len(topCon.nodes) == 1 and len(leaves) > 1:
-            # Layout is wrapped in another container, recurse
-            self.popWindow(window, topCon.nodes[0])
-        else:
-            # A stack item was destroyed
-            self.setMasterWidth()
-            allWindowIds = {window.id for window in leaves}
-            for id in self.stack:
-                if id not in allWindowIds:
-                    self.stack.remove(id)
-                    self.updateSubStack()
-                    break
+    def destroySubstackIfExists(self):
+        if self.substackExists:
+            lastVisibleStack = self.windowIds[self.depthLimit - 1]
+            for windowId in reversed(self.windowIds[self.depthLimit :]):
+                self.moveWindowCommand(windowId, lastVisibleStack)
+
+            self.substackExists = False
 
     def toggleStackLayout(self):
-        # Pick next stack layout
-        if self.stackLayout == "splitv":
-            self.stackLayout = "tabbed"
-        elif self.stackLayout == "tabbed":
-            self.stackLayout = "stacking"
-        elif self.stackLayout == "stacking":
-            self.stackLayout = "splitv"
-        else:
-            return
+        self.destroySubstackIfExists()
 
-        # Apply the new stack layout
-        if len(self.stack) != 0:
-            self.con.command(
-                "[con_id=%d] layout %s" % (self.stack[0], self.stackLayout)
-            )
-            self.log("Changed stackLayout to %s" % self.stackLayout)
+        self.stackLayout = self.stackLayout.nextChoice()
+        self.setStackLayout()
 
-    def toggleStackSide(self):
-        self.stackSide = "left" if self.stackSide == "right" else "right"
-        self.setStackSide()
+        self.createSubstackIfNeeded()
 
-    def setStackSide(self):
-        stackCon = self.getConById(self.stackId)
-        masterCon = self.getConById(self.masterId)
-        if stackCon is None or masterCon is None:
-            return
-        moveToRight = stackCon.rect.x < masterCon.rect.x and self.stackSide == "right"
-        moveToLeft = stackCon.rect.x > masterCon.rect.x and self.stackSide == "left"
-
-        if stackCon is not None and masterCon is not None:
-            self.con.command("[con_id=%d] layout splith" % self.masterId)
-            if moveToLeft or moveToRight:
-                self.con.command(
-                    "[con_id=%d] swap container with con_id %d"
-                    % (self.stackId, self.masterId)
-                )
-        self.setMasterWidth()
-
-    def moveUp(self):
-        focusedWindow = self.getFocusedCon()
-
-        if focusedWindow is None:
-            self.log("No window focused, can't move")
-            return
-
-        # Swap master and top of stack if only two windows, or focus is top of stack
-        if len(self.stack) < 2 or focusedWindow.id == self.stack[-1]:
-            targetId = self.stack.pop()
-            self.con.command(
-                "[con_id=%d] swap container with con_id %d" % (targetId, self.masterId)
-            )
-            self.stack.append(self.masterId)
-            self.masterId = targetId
-            self.log("Swapped window %d with master" % targetId)
-            return
-
-        # Swap window with window above
-        try:
-            index = self.stack.index(focusedWindow.id)
-        except ValueError:
-            self.log("Window %d not found in stack" % focusedWindow.id)
-            return
-
-        self.con.command(
-            "[con_id=%d] swap container with con_id %d"
-            % (focusedWindow.id, self.stack[index + 1])
-        )
-        self.stack[index] = self.stack[index + 1]
-        self.stack[index + 1] = focusedWindow.id
-        self.log("Swapped window %d with %d" % (focusedWindow.id, self.stack[index]))
-
-    def moveDown(self):
-        # Check if stack only has one window
-        if len(self.stack) < 2:
-            return
-
-        focusedWindow = self.getFocusedCon()
-        if focusedWindow is None:
-            self.log("No window focused, can't move")
-            return
-
-        # Check if we hit bottom of stack
-        if focusedWindow.id == self.stack[0]:
-            self.log("Bottom of stack, nowhere to go")
-            return
-
-        # Swap with top of stack if master is focused
-        if focusedWindow.id == self.masterId:
-            targetId = self.stack.pop()
-            self.con.command(
-                "[con_id=%d] swap container with con_id %d" % (targetId, self.masterId)
-            )
-            self.stack.append(self.masterId)
-            self.masterId = targetId
-            self.log("Swapped window %d with master" % targetId)
-            return
-
-        # Swap window with window below
-        try:
-            index = self.stack.index(focusedWindow.id)
-        except ValueError:
-            self.log("Window %d not found in stack" % focusedWindow.id)
-            return
-
-        self.con.command(
-            "[con_id=%d] swap container with con_id %d"
-            % (focusedWindow.id, self.stack[index - 1])
-        )
-        self.stack[index] = self.stack[index - 1]
-        self.stack[index - 1] = focusedWindow.id
-        self.log("Swapped window %d with %d" % (focusedWindow.id, self.stack[index]))
-
-    def rotateCCW(self):
-        # Swap master and top of stack if only two windows
-        if len(self.stack) < 2:
-            targetId = self.stack.pop()
-            self.con.command(
-                "[con_id=%d] swap container with con_id %d" % (targetId, self.masterId)
-            )
-            self.stack.append(self.masterId)
-            self.masterId = targetId
-            self.log("Swapped window %d with master" % targetId)
-            return
-
-        # Swap top of stack with master, then move old master to bottom
-        newMasterId = self.stack.pop()
-        prevMasterId = self.masterId
-        bottomId = self.stack[0]
-        self.con.command(
-            "[con_id=%d] swap container with con_id %d" % (newMasterId, prevMasterId)
-        )
-        self.log("swapped top of stack with master")
-        self.moveWindow(prevMasterId, bottomId)
-        self.log("Moved previous master to bottom of stack")
-        self.con.command("[con_id=%d] focus" % newMasterId)
-
-        # Update record
-        self.masterId = newMasterId
-        self.stack.appendleft(prevMasterId)
-        self.updateSubStack()
-
-    def rotateCW(self):
-        # Swap master and top of stack if only two windows
-        if len(self.stack) < 2:
-            targetId = self.stack.pop()
-            self.con.command(
-                "[con_id=%d] swap container with con_id %d" % (targetId, self.masterId)
-            )
-            self.stack.append(self.masterId)
-            self.masterId = targetId
-            self.log("Swapped window %d with master" % targetId)
-            return
-
-        # Swap bottom of stack with master, then move old master to top
-        newMasterId = self.stack.popleft()
-        prevMasterId = self.masterId
-        topId = self.stack[-1]
-        self.con.command(
-            "[con_id=%d] swap container with con_id %d" % (newMasterId, prevMasterId)
-        )
-        self.log("swapped bottom of stack with master")
-        self.moveWindow(prevMasterId, topId)
-        self.con.command("[con_id=%d] focus" % prevMasterId)
-        if self.stackLayout != "tabbed":
-            self.con.command("move up")
-        else:
-            self.con.command("move left")
-        self.con.command("[con_id=%d] focus" % newMasterId)
-        self.log("Moved previous master to top of stack")
-
-        # Update record
-        self.masterId = newMasterId
-        self.stack.append(prevMasterId)
-        self.updateSubStack()
-
-    def swapMaster(self):
-        # Exit if less than two windows
-        if len(self.stack) == 0:
-            self.log("Stack emtpy, can't swap")
-            return
-
-        focusedWindow = self.getFocusedCon()
-
-        if focusedWindow is None:
-            self.log("No window focused, can't swap")
-            return
-
-        # If focus is master, swap with top of stack
-        if focusedWindow.id == self.masterId:
-            targetId = self.stack.pop()
-            self.con.command(
-                "[con_id=%d] swap container with con_id %d" % (targetId, self.masterId)
-            )
-            self.stack.append(self.masterId)
-            self.masterId = targetId
-            self.log("Swapped master with top of stack")
-            self.con.command("[con_id=%d] focus" % self.masterId)
-            return
-
-        # Find focused window in record
-        for i in range(len(self.stack)):
-            if self.stack[i] == focusedWindow.id:
-                # Swap window with master
-                self.con.command(
-                    "[con_id=%d] swap container with con_id %d"
-                    % (focusedWindow.id, self.masterId)
-                )
-
-                # Update record
-                self.stack[i] = self.masterId
-                self.masterId = focusedWindow.id
-                self.log("Swapped master with window %d" % focusedWindow.id)
-
-                # Refocus master
-                self.con.command("[con_id=%d] focus" % self.masterId)
+    def toggleStackSide(self, workspace: Con):
+        if len(self.windowIds) >= 2:
+            firstStack = workspace.find_by_id(self.windowIds[1])
+            if not firstStack:
+                self.log("Couldn't find the first stack window. Probably a bug.")
                 return
+            stackParent = firstStack.parent
+            assert stackParent
+            self.swapWindowsCommand(self.windowIds[0], stackParent.id)
+            self.setMasterWidth()
+        self.stackSide = Side.opposite(self.stackSide)
 
-    # These are some helper functions for getting container ids
-    # TODO(mschulkind): Remove these again and replace with queries on the workspace passed in.
-    def getWorkspaceCon(self):
-        return self.con.get_tree().find_by_id(self.workspaceId)
+    def getWindowListIndex(self, window: Con) -> Optional[int]:
+        try:
+            return self.windowIds.index(window.id)
+        except ValueError:
+            self.logCaller(f"window id {window.id} not in window list")
+            return None
 
-    def getFocusedCon(self):
-        return self.con.get_tree().find_focused()
+    def moveWindowToIndex(self, window: Con, targetIndex: int):
+        assert targetIndex >= 0 and targetIndex < len(self.windowIds)
 
-    def getConById(self, conId):
-        return self.con.get_tree().find_by_id(conId)
+        if len(self.windowIds) <= 1:
+            self.log("not enough windows to move any")
+            return
+
+        sourceIndex = self.getWindowListIndex(window)
+        if sourceIndex is None:
+            return
+        if sourceIndex == targetIndex:
+            self.log("noop move. likely a bug.")
+            return
+
+        masterId = self.windowIds[0]
+        topOfStackId = self.windowIds[1]
+        if (sourceIndex == 0 and targetIndex == 1) or (
+            sourceIndex == 1 and targetIndex == 0
+        ):
+            self.swapWindowsCommand(masterId, topOfStackId)
+        elif sourceIndex == 0:  # Master is source
+            self.swapWindowsCommand(topOfStackId, masterId)
+            self.moveWindowCommand(masterId, self.windowIds[targetIndex])
+        elif targetIndex == 0:  # Master is target
+            self.swapWindowsCommand(masterId, self.windowIds[sourceIndex])
+            self.moveWindowCommand(masterId, self.windowIds[1])
+            self.swapWindowsCommand(masterId, self.windowIds[1])
+        elif sourceIndex - targetIndex in {-1, 1}:  # Neighbors
+            # Moving 1 position in either direction
+            self.swapWindowsCommand(
+                self.windowIds[sourceIndex], self.windowIds[targetIndex]
+            )
+        elif targetIndex == 1:  # Top of stack from in the stack
+            self.moveWindowCommand(self.windowIds[sourceIndex], topOfStackId)
+            self.swapWindowsCommand(self.windowIds[sourceIndex], topOfStackId)
+        else:  # Non-master, target somewhere in the stack not at the top
+            self.moveWindowCommand(
+                window.id,
+                self.windowIds[
+                    targetIndex if sourceIndex < targetIndex else targetIndex - 1
+                ],
+            )
+
+        if self.substackExists:
+            if sourceIndex >= self.depthLimit and targetIndex < self.depthLimit:
+                # A substack window is being moved out of the substack, so we need to demote a
+                # window to refill the substack.
+                lastVisibleStack = self.windowIds[self.depthLimit - 1]
+                firstSubstack = self.windowIds[self.depthLimit]
+                if firstSubstack == window.id:
+                    firstSubstack = self.windowIds[self.depthLimit + 1]
+                self.moveWindowCommand(lastVisibleStack, firstSubstack)
+                self.swapWindowsCommand(lastVisibleStack, firstSubstack)
+
+            if sourceIndex < self.depthLimit and targetIndex >= self.depthLimit:
+                # A non-substack-window was added to the substack, so we need to promote a window
+                # from the substack to refill the visible stack.
+                lastVisibleStack = self.windowIds[self.depthLimit - 1]
+                firstSubstack = self.windowIds[self.depthLimit]
+                self.moveWindowCommand(firstSubstack, lastVisibleStack)
+
+        self.windowIds.remove(window.id)
+        self.windowIds.insert(targetIndex, window.id)
+        self.log(f"window ids: {self.windowIds}")
+
+    def moveWindowRelative(self, window: Con, delta: int):
+        sourceIndex = self.getWindowListIndex(window)
+        if sourceIndex is None:
+            return
+        targetIndex = sourceIndex + delta
+        if (targetIndex < 0) or (targetIndex >= len(self.windowIds)):
+            # Out of range
+            self.log("Move out of range")
+            return
+        else:
+            self.moveWindowToIndex(window, targetIndex)
+
+    def rotateWindows(self, workspace: Con, direction: str):
+        assert direction == "cw" or direction == "ccw"
+        if len(self.windowIds) <= 1:
+            return
+        if (self.stackSide == Side.LEFT and direction == "cw") or (
+            self.stackSide == Side.RIGHT and direction == "ccw"
+        ):
+            master = workspace.find_by_id(self.windowIds[0])
+            assert master
+            self.moveWindowToIndex(master, len(self.windowIds) - 1)
+        else:
+            last = workspace.find_by_id(self.windowIds[-1])
+            assert last
+            self.moveWindowToIndex(last, 0)
+
+    def swapWindows(self, source: Con, target: Con):
+        if not self.windowIds or source.id == target.id:
+            return
+
+        sourceIndex = self.getWindowListIndex(source)
+        if sourceIndex is None:
+            return
+
+        targetIndex = self.getWindowListIndex(target)
+        if targetIndex is None:
+            return
+
+        self.swapWindowsCommand(source.id, target.id)
+
+        self.windowIds[sourceIndex], self.windowIds[targetIndex] = (
+            self.windowIds[targetIndex],
+            self.windowIds[sourceIndex],
+        )
+        self.log(f"window ids: {self.windowIds}")
+
+    def moveWindowHorizontally(self, workspace: Con, window: Con, toSide: Side):
+        if len(self.windowIds) < 2:
+            return
+
+        sourceIndex = self.getWindowListIndex(window)
+        assert sourceIndex is not None
+        isMaster = window.id == self.windowIds[0]
+
+        if self.stackLayout in (StackLayout.TABBED, StackLayout.SPLITH):
+            if self.stackSide == Side.LEFT:
+                # Master towards the stack, or bottom of stack away from the stack
+                if (self.stackSide == toSide and isMaster) or (
+                    self.stackSide != toSide
+                    and (sourceIndex + 1) == len(self.windowIds)
+                ):
+                    master = workspace.find_by_id(self.windowIds[0])
+                    bottomOfStack = workspace.find_by_id(self.windowIds[-1])
+                    assert master and bottomOfStack
+                    self.swapWindows(master, bottomOfStack)
+                    return
+
+                # Master away from the stack, or top of stack away from the stack
+                if (isMaster and self.stackSide != toSide) or (
+                    sourceIndex == 1 and self.stackSide == toSide
+                ):
+                    return
+
+            self.moveWindowRelative(window, -1 if toSide == Side.LEFT else 1)
+            return
+
+        if self.stackSide == toSide and isMaster:
+            self.moveWindowToIndex(window, 1)
+        elif self.stackSide != toSide and not isMaster:
+            self.moveWindowToIndex(window, 0)

@@ -313,10 +313,16 @@ class Layman:
     def onBinding(self, event: BindingEvent):
         # Handle chained commands one at a time
         command: str = event.ipc_data["binding"]["command"].strip()
+        # We only want to handle this binding if the first command is a "nop layman" command. If it
+        # is, then we split all commands by ';' and either handle them ourselves if it is a layman
+        # command or pass it on to i3/Sway if it is not.
         if command.startswith("nop layman"):
             for command in command.split(";"):
-                command = command.replace("nop layman ", "").strip()
-                self.handleCommand(command)
+                if command.startswith("nop layman"):
+                    command = command.replace("nop layman ", "").strip()
+                    self.handleCommand(command)
+                else:
+                    self.conn.command(command)
 
     def onCommand(self, command):
         for command in command.split(";"):
