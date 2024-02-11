@@ -116,7 +116,9 @@ class Layman:
             return
 
         if state.layout_manager:
-            self.log("Calling windowAdded for workspace %s" % workspace.name)
+            self.log(
+                f"Calling windowAdded for window id {window.id} on workspace {workspace.name}"
+            )
             with layoutManagerReloader(self, workspace):
                 state.layout_manager.windowAdded(event, workspace, window)
 
@@ -152,7 +154,9 @@ class Layman:
 
         # Pass command to the appropriate manager
         if state.layout_manager:
-            self.log("Calling windowFocused for workspace %s" % workspace.name)
+            self.log(
+                f"Calling windowFocused for window id {window.id} on workspace {workspace.name}"
+            )
             with layoutManagerReloader(self, workspace):
                 state.layout_manager.windowFocused(event, workspace, window)
 
@@ -190,7 +194,9 @@ class Layman:
 
         # Pass command to the appropriate manager
         if state.layout_manager:
-            self.log("Calling windowRemoved for workspace %s" % workspace.name)
+            self.log(
+                f"Calling windowRemoved for window id {event.container.id} on workspace {workspace.name}"
+            )
             with layoutManagerReloader(self, workspace):
                 state.layout_manager.windowRemoved(event, workspace, event.container)
 
@@ -227,7 +233,9 @@ class Layman:
         if from_workspace.name == to_workspace.name:
             # Window moving within the same workspace.
             if from_state.layout_manager:
-                self.log("Calling windowMoved for workspace %s" % from_workspace.name)
+                self.log(
+                    f"Calling windowMoved for window id {window.id} on workspace {from_workspace.name}"
+                )
                 with layoutManagerReloader(self, from_workspace):
                     from_state.layout_manager.windowMoved(
                         event, from_workspace, event.container
@@ -239,7 +247,9 @@ class Layman:
                 self.log(
                     f"Workspace {from_workspace.name} window ids: {from_state.windowIds}"
                 )
-                self.log("Calling windowRemoved for workspace %s" % from_workspace.name)
+                self.log(
+                    f"Calling windowRemoved for window id {window.id} on workspace {from_workspace.name}"
+                )
                 with layoutManagerReloader(self, from_workspace):
                     from_state.layout_manager.windowRemoved(
                         event, from_workspace, event.container
@@ -250,7 +260,9 @@ class Layman:
                 self.log(
                     f"Workspace {to_workspace.name} window ids: {to_state.windowIds}"
                 )
-                self.log("Calling windowAdded for workspace %s" % to_workspace.name)
+                self.log(
+                    f"Calling windowAdded for window id {window.id} on workspace {to_workspace.name}"
+                )
                 with layoutManagerReloader(self, to_workspace):
                     to_state.layout_manager.windowAdded(event, to_workspace, window)
 
@@ -278,7 +290,9 @@ class Layman:
 
         # Only send windowFloating event if wlm supports it
         if state.layout_manager.supportsFloating:
-            self.log("Calling windowFloating for workspace %s" % workspace.name)
+            self.log(
+                f"Calling windowFloating for window id {window.id} on workspace {workspace.name}"
+            )
             with layoutManagerReloader(self, workspace):
                 state.layout_manager.windowFloating(event, workspace, window)
             return
@@ -289,13 +303,17 @@ class Layman:
 
         if swayFloating or i3Floating:
             # Window floating, treat like it's removed.
-            self.log("Calling windowRemoved for workspace %s" % workspace.name)
+            self.log(
+                f"Calling windowRemoved for window id {window.id} on workspace {workspace.name}"
+            )
             with layoutManagerReloader(self, workspace):
                 state.layout_manager.windowRemoved(event, workspace, window)
             return
         else:
             # Window is not floating, treat like a new window
-            self.log("Calling windowAdded for workspace %s" % workspace.name)
+            self.log(
+                "Calling windowAdded for window id {window.id} on workspace {workspace.name}"
+            )
             with layoutManagerReloader(self, workspace):
                 state.layout_manager.windowAdded(event, workspace, window)
             return
