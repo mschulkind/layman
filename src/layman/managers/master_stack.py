@@ -146,6 +146,8 @@ class MasterStackLayoutManager(WorkspaceLayoutManager):
             self.moveWindowHorizontally(workspace, focused, Side.RIGHT)
         elif command == "move left":
             self.moveWindowHorizontally(workspace, focused, Side.LEFT)
+        elif command == "move to master":
+            self.moveWindowToIndex(focused, 0)
         elif command == "rotate ccw":
             self.rotateWindows(workspace, "ccw")
         elif command == "rotate cw":
