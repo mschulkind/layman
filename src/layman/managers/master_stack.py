@@ -394,6 +394,7 @@ class MasterStackLayoutManager(WorkspaceLayoutManager):
 
         masterId = self.windowIds[0]
         topOfStackId = self.windowIds[1]
+        substackRebalanced = False
         if (sourceIndex == 0 and targetIndex == 1) or (
             sourceIndex == 1 and targetIndex == 0
         ):
@@ -410,6 +411,9 @@ class MasterStackLayoutManager(WorkspaceLayoutManager):
             self.swapWindowsCommand(
                 self.windowIds[sourceIndex], self.windowIds[targetIndex]
             )
+            # Because we just swapped the windows, the substack remains balanced, and we can skip
+            # rebalancing below.
+            substackRebalanced = True
         elif targetIndex == 1:  # Top of stack from in the stack
             self.moveWindowCommand(self.windowIds[sourceIndex], topOfStackId)
             self.swapWindowsCommand(self.windowIds[sourceIndex], topOfStackId)
@@ -421,7 +425,7 @@ class MasterStackLayoutManager(WorkspaceLayoutManager):
                 ],
             )
 
-        if self.substackExists:
+        if self.substackExists and not substackRebalanced:
             if sourceIndex >= self.depthLimit and targetIndex < self.depthLimit:
                 # A substack window is being moved out of the substack, so we need to demote a
                 # window to refill the substack.
