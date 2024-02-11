@@ -46,6 +46,7 @@ from layman.server import MessageServer
 @dataclass
 class WorkspaceState:
     layout_manager: Optional[WorkspaceLayoutManager] = None
+    layout_name: str = "none"
     windowIds: set[int] = field(default_factory=set)
     is_excluded: bool = False
 
@@ -59,7 +60,7 @@ def layoutManagerReloader(layman: "Layman", workspace: Con):
         layman.log(
             f"Reloading layout manager for workspace {workspace.name} after exception"
         )
-        layman.setWorkspaceLayoutManager(workspace)
+        layman.setWorkspaceLayout(workspace)
 
 
 class Layman:
@@ -109,6 +110,9 @@ class Layman:
         state.windowIds.add(window.id)
         self.log(f"Adding window ID {window.id} to workspace named {workspace.name}")
         self.log(f"Workspace {workspace.name} window ids: {state.windowIds}")
+
+        if len(state.windowIds) == 1:
+            self.setWorkspaceLayoutCommand(workspace)
 
         # Check if we should pass this call to a manager
         if state.is_excluded:
@@ -242,8 +246,8 @@ class Layman:
                     )
         else:
             # Window moving between two workspaces.
+            from_state.windowIds.remove(window.id)
             if from_state.layout_manager:
-                from_state.windowIds.remove(window.id)
                 self.log(
                     f"Workspace {from_workspace.name} window ids: {from_state.windowIds}"
                 )
@@ -255,8 +259,8 @@ class Layman:
                         event, from_workspace, event.container
                     )
 
+            to_state.windowIds.add(window.id)
             if to_state.layout_manager:
-                to_state.windowIds.add(window.id)
                 self.log(
                     f"Workspace {to_workspace.name} window ids: {to_state.windowIds}"
                 )
@@ -265,6 +269,9 @@ class Layman:
                 )
                 with layoutManagerReloader(self, to_workspace):
                     to_state.layout_manager.windowAdded(event, to_workspace, window)
+            else:
+                if len(to_state.windowIds) == 1:
+                    self.setWorkspaceLayoutCommand(to_workspace)
 
     def windowFloating(
         self,
@@ -348,7 +355,7 @@ class Layman:
                     command = command.replace("nop layman ", "").strip()
                     self.handleCommand(command)
                 else:
-                    self.conn.command(command)
+                    self.command(command)
 
     def onCommand(self, command):
         for command in command.split(";"):
@@ -360,7 +367,7 @@ class Layman:
 
         workspace = utils.findFocusedWorkspace(self.conn)
         if not workspace or self.workspaceStates[workspace.name].is_excluded:
-            self.conn.command(command)
+            self.command(command)
             return
 
         state = self.workspaceStates[workspace.name]
@@ -369,7 +376,7 @@ class Layman:
         if command.startswith("move") and (
             not state.layout_manager or not state.layout_manager.overridesMoveBinds
         ):
-            self.conn.command(command)
+            self.command(command)
             self.log('Handling bind "%s" for workspace %s' % (command, workspace.name))
             return
 
@@ -384,7 +391,7 @@ class Layman:
         # Handle wlm creation commands
         if "layout" in command:
             shortName = command.split(" ")[1]
-            self.setWorkspaceLayoutManager(workspace, shortName)
+            self.setWorkspaceLayout(workspace, shortName)
             return
 
         # Pass unknown command to the appropriate wlm
@@ -402,6 +409,16 @@ class Layman:
     The following section of code handles miscellaneous tasks needed by the event
     handlers above.
     """
+
+    # Runs and logs a command and its result.
+    def command(self, command: str):
+        self.logCaller(f"Running command: {command}")
+        results = self.conn.command(command)
+        for result in results:
+            if result.success:
+                self.logCaller("Command succeeded.")
+            else:
+                self.logCaller(f"Command failed: {result.error}")
 
     def fetchUserLayouts(self):
         self.userLayouts = {}
@@ -439,7 +456,7 @@ class Layman:
 
         default_layout = self.options.getForWorkspace(workspace, config.KEY_LAYOUT)
         if default_layout and not state.is_excluded:
-            self.setWorkspaceLayoutManager(workspace, default_layout)
+            self.setWorkspaceLayout(workspace, default_layout)
 
     def getLayoutByShortName(self, shortName):
         if shortName in self.builtinLayouts:
@@ -450,41 +467,56 @@ class Layman:
 
         return None
 
-    def setWorkspaceLayoutManager(
-        self, workspace: Con, layoutShortName: Optional[str] = None
-    ):
+    def setWorkspaceLayoutCommand(self, workspace: Con):
+        state = self.workspaceStates[workspace.name]
+        leaves = workspace.leaves()
+        if len(leaves) != 1:
+            # Can't reliably set the layout with more than one leaf, so ignore it.
+            return
+        if (
+            state.layout_name
+            and not state.layout_manager
+            and state.layout_name != "none"
+        ):
+            self.command(f"[con_id={leaves[0].id}] split none")
+            self.command(f"[con_id={leaves[0].id}] layout {state.layout_name}")
+
+    def setWorkspaceLayout(self, workspace: Con, layoutName: Optional[str] = None):
         state = self.workspaceStates[workspace.name]
 
-        # If no layoutShortName is passed, we replace any current layout manager with a new copy of
+        # If no layoutName is passed, we replace any current layout manager with a new copy of
         # that same layout manager, if any.
-        if not layoutShortName:
+        if not layoutName:
             if state.layout_manager:
-                layoutShortName = state.layout_manager.shortName
+                layoutName = state.layout_manager.shortName
             else:
-                layoutShortName = "none"
+                layoutName = "none"
 
         if state.is_excluded:
             self.logError(
                 f"Attempting to set layout for excluded workspace {workspace.name}"
             )
             return
+        #
+        # Pass any built-in layouts to i3/Sway.
 
         layout_manager_class = None
-        if layoutShortName == "none":
+        if layoutName == "none":
             state.layout_manager = None
+        elif layoutName in ("splitv", "splith", "tabbed", "stacking"):
+            state.layout_name = layoutName
         else:
-            layout_manager_class = self.getLayoutByShortName(layoutShortName)
+            layout_manager_class = self.getLayoutByShortName(layoutName)
             if layout_manager_class:
                 state.layout_manager = layout_manager_class(
                     self.conn, workspace, self.options
                 )
-        if layout_manager_class or layoutShortName == "none":
+        if layout_manager_class or layoutName == "none" or state.layout_name != "none":
             self.log(
-                "Initialized workspace %s with layout %s"
-                % (workspace.name, layoutShortName)
+                "Initialized workspace %s with layout %s" % (workspace.name, layoutName)
             )
         else:
-            self.log("Can't find layout manager named %s" % layoutShortName)
+            self.log("Can't find layout manager named %s" % layoutName)
 
     def createConfig(self):
         configPath = utils.getConfigPath()
