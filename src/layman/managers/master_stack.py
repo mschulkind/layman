@@ -153,7 +153,7 @@ class MasterStackLayoutManager(WorkspaceLayoutManager):
             if len(split) == 4:
                 try:
                     index = int(command.split(" ")[3])
-                    if index < len(self.windowIds):
+                    if index >= 0 and index < len(self.windowIds):
                         self.moveWindowToIndex(focused, index)
                     else:
                         self.log(f"index {index} out of range.")
