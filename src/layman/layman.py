@@ -108,6 +108,7 @@ class Layman:
         state = self.workspaceStates[workspace.name]
         state.windowIds.add(window.id)
         self.log(f"Adding window ID {window.id} to workspace named {workspace.name}")
+        self.log(f"Workspace {workspace.name} window ids: {state.windowIds}")
 
         # Check if we should pass this call to a manager
         if state.is_excluded:
@@ -181,6 +182,7 @@ class Layman:
         self.log(f"window ID {event.container.id} from workspace {workspace.name}")
 
         state.windowIds.remove(event.container.id)
+        self.log(f"Workspace {workspace.name} window ids: {state.windowIds}")
 
         if state.is_excluded:
             self.log("Workspace excluded")
@@ -234,6 +236,9 @@ class Layman:
             # Window moving between two workspaces.
             if from_state.layout_manager:
                 from_state.windowIds.remove(window.id)
+                self.log(
+                    f"Workspace {from_workspace.name} window ids: {from_state.windowIds}"
+                )
                 self.log("Calling windowRemoved for workspace %s" % from_workspace.name)
                 with layoutManagerReloader(self, from_workspace):
                     from_state.layout_manager.windowRemoved(
@@ -242,6 +247,9 @@ class Layman:
 
             if to_state.layout_manager:
                 to_state.windowIds.add(window.id)
+                self.log(
+                    f"Workspace {to_workspace.name} window ids: {to_state.windowIds}"
+                )
                 self.log("Calling windowAdded for workspace %s" % to_workspace.name)
                 with layoutManagerReloader(self, to_workspace):
                     to_state.layout_manager.windowAdded(event, to_workspace, window)
@@ -408,7 +416,8 @@ class Layman:
             self.options.getDefault(config.KEY_EXCLUDED_WORKSPACES) or []
         )
 
-        state.windowIds |= set(w.id for w in workspace.leaves())
+        state.windowIds = set(w.id for w in workspace.leaves())
+        self.log(f"Workspace {workspace.name} window ids: {state.windowIds}")
 
         default_layout = self.options.getForWorkspace(workspace, config.KEY_LAYOUT)
         if default_layout and not state.is_excluded:
