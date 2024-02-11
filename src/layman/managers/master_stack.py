@@ -148,6 +148,19 @@ class MasterStackLayoutManager(WorkspaceLayoutManager):
             self.moveWindowHorizontally(workspace, focused, Side.LEFT)
         elif command == "move to master":
             self.moveWindowToIndex(focused, 0)
+        elif command.startswith("move to index"):
+            split = command.split(" ")
+            if len(split) == 4:
+                try:
+                    index = int(command.split(" ")[3])
+                    if index < len(self.windowIds):
+                        self.moveWindowToIndex(focused, index)
+                    else:
+                        self.log(f"index {index} out of range.")
+                    return
+                except ValueError:
+                    pass
+            self.log(f"Usage: move to index <i>")
         elif command == "rotate ccw":
             self.rotateWindows(workspace, "ccw")
         elif command == "rotate cw":
