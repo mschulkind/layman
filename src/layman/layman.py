@@ -153,7 +153,10 @@ class Layman:
             # focused window, or the focused window doesn't match the one in the event, we just
             # assume that the focused changed again and quickly after this event was fired, so we
             # ignore it.
-            self.log("focused window not found")
+            self.log(
+                f"focused window {event.container.id} not found,"
+                + f" found {focused_workspace_window.id if focused_workspace_window else None} instead"
+            )
             return
 
         # Pass command to the appropriate manager
