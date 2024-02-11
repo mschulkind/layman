@@ -430,7 +430,21 @@ class MasterStackLayoutManager(WorkspaceLayoutManager):
         elif targetIndex == 1:  # Top of stack from in the stack
             self.moveWindowCommand(self.windowIds[sourceIndex], topOfStackId)
             self.swapWindowsCommand(self.windowIds[sourceIndex], topOfStackId)
-        else:  # Non-master, target somewhere in the stack not at the top
+        elif (
+            self.substackExists
+            and targetIndex == self.depthLimit
+            and sourceIndex > self.depthLimit
+        ):
+            # Top of substack from within the substack
+            self.moveWindowCommand(
+                window.id,
+                self.windowIds[targetIndex],
+            )
+            self.swapWindowsCommand(
+                window.id,
+                self.windowIds[targetIndex],
+            )
+        else:
             self.moveWindowCommand(
                 window.id,
                 self.windowIds[
