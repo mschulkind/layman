@@ -247,10 +247,10 @@ class Layman:
         else:
             # Window moving between two workspaces.
             from_state.windowIds.remove(window.id)
+            self.log(
+                f"Workspace {from_workspace.name} window ids: {from_state.windowIds}"
+            )
             if from_state.layout_manager:
-                self.log(
-                    f"Workspace {from_workspace.name} window ids: {from_state.windowIds}"
-                )
                 self.log(
                     f"Calling windowRemoved for window id {window.id} on workspace {from_workspace.name}"
                 )
@@ -260,10 +260,8 @@ class Layman:
                     )
 
             to_state.windowIds.add(window.id)
+            self.log(f"Workspace {to_workspace.name} window ids: {to_state.windowIds}")
             if to_state.layout_manager:
-                self.log(
-                    f"Workspace {to_workspace.name} window ids: {to_state.windowIds}"
-                )
                 self.log(
                     f"Calling windowAdded for window id {window.id} on workspace {to_workspace.name}"
                 )
