@@ -320,7 +320,7 @@ class Layman:
         else:
             # Window is not floating, treat like a new window
             self.log(
-                "Calling windowAdded for window id {window.id} on workspace {workspace.name}"
+                f"Calling windowAdded for window id {window.id} on workspace {workspace.name}"
             )
             with layoutManagerReloader(self, workspace):
                 state.layout_manager.windowAdded(event, workspace, window)
