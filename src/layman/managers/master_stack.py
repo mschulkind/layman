@@ -127,8 +127,6 @@ class MasterStackLayoutManager(WorkspaceLayoutManager):
         else:
             self.depthLimit = depthLimit
 
-        print(self.masterWidth, self.stackLayout, self.stackSide, self.depthLimit)
-
         # If windows exist, fit them into MasterStack
         self.arrangeWindows(workspace)
 
