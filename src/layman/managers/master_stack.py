@@ -16,9 +16,10 @@ You should have received a copy of the GNU General Public License along with
 layman. If not, see <https://www.gnu.org/licenses/>.
 """
 from enum import Enum
-from typing import Optional
+from typing import Optional, Type, TypeVar
 
 from i3ipc import Con
+from layman.config import LaymanConfig
 from layman.managers.workspace import WorkspaceLayoutManager
 
 KEY_MASTER_WIDTH = "masterWidth"
@@ -74,34 +75,58 @@ class MasterStackLayoutManager(WorkspaceLayoutManager):
     substackExists: bool
     lastFocusedWindowId: Optional[int]
 
+    E = TypeVar("E", bound=Enum)
+
+    def getEnumOption(
+        self, workspace: Con, options: LaymanConfig, enum_class: Type[E], key: str
+    ) -> Optional[E]:
+        value = options.getForWorkspace(workspace, key)
+        try:
+            if value is not None:
+                if not isinstance(value, str):
+                    raise KeyError()
+
+                return enum_class[value.upper()]
+        except KeyError:
+            self.logError(
+                f"Invalid {key} '{value}'. Must be in {[l.name.lower() for l in enum_class]}."
+            )
+        return None
+
     def __init__(self, con, workspace, options):
         super().__init__(con, workspace, options)
         # A list of all window IDs in the workspace, with the first ID being the master and the
         # rest being the stack.
         self.windowIds = []
-        self.masterWidth = options.getForWorkspace(workspace, KEY_MASTER_WIDTH) or 50
+        self.masterWidth = 50
+        masterWidth = options.getForWorkspace(workspace, KEY_MASTER_WIDTH)
+        if isinstance(masterWidth, int) and masterWidth > 0 and masterWidth < 100:
+            self.masterWidth = masterWidth
+        elif masterWidth is not None:
+            self.logError(
+                f"Invalid masterWidth of '{masterWidth}'. Must be an integer between 0 and 100 exclusive."
+            )
         self.substackExists = False
         self.lastFocusedWindowId = None
 
-        stackLayoutStr = (
-            options.getForWorkspace(workspace, KEY_STACK_LAYOUT) or "splitv"
+        self.stackSide = (
+            self.getEnumOption(workspace, options, Side, KEY_STACK_SIDE) or Side.RIGHT
+        )
+        self.stackLayout = (
+            self.getEnumOption(workspace, options, StackLayout, KEY_STACK_LAYOUT)
+            or StackLayout.SPLITV
         )
 
-        try:
-            self.stackLayout = StackLayout[stackLayoutStr.upper()]
-        except KeyError:
-            self.logError(f"Invalid stack layout {stackLayoutStr}")
-
-        stackSideStr = options.getForWorkspace(workspace, KEY_STACK_SIDE) or "right"
-        try:
-            self.stackSide = Side[stackSideStr.upper()]
-        except KeyError:
-            self.logError(f"Invalid stack side {stackSideStr}")
-
-        self.depthLimit = options.getForWorkspace(workspace, KEY_DEPTH_LIMIT) or 0
-        if self.depthLimit == 1:
-            self.logError(f"If enabled, depthLimit must be greater than 1.")
+        depthLimit = options.getForWorkspace(workspace, KEY_DEPTH_LIMIT) or 0
+        if not isinstance(depthLimit, int) or depthLimit < 0 or depthLimit == 1:
+            self.logError(
+                f"Invalid depthLimit '{depthLimit}'. Must be an integer greater than 1."
+            )
             self.depthLimit = 0
+        else:
+            self.depthLimit = depthLimit
+
+        print(self.masterWidth, self.stackLayout, self.stackSide, self.depthLimit)
 
         # If windows exist, fit them into MasterStack
         self.arrangeWindows(workspace)
