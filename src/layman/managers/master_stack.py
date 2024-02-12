@@ -65,6 +65,7 @@ class Side(Enum):
 class MasterStackLayoutManager(WorkspaceLayoutManager):
     shortName = "MasterStack"
     overridesMoveBinds = True
+    overridesFocusBinds = True
 
     windowIds: list[int]
 
@@ -186,6 +187,10 @@ class MasterStackLayoutManager(WorkspaceLayoutManager):
                 except ValueError:
                     pass
             self.log(f"Usage: move to index <i>")
+        elif command == "focus up":
+            self.focusWindowRelative(workspace, -1)
+        elif command == "focus down":
+            self.focusWindowRelative(workspace, 1)
         elif command == "rotate ccw":
             self.rotateWindows(workspace, "ccw")
         elif command == "rotate cw":
@@ -595,3 +600,12 @@ class MasterStackLayoutManager(WorkspaceLayoutManager):
             self.moveWindowToIndex(window, 1)
         elif self.stackSide != toSide and not isMaster:
             self.moveWindowToIndex(window, 0)
+
+    def focusWindowRelative(self, workspace: Con, delta: int):
+        assert self.lastFocusedWindowId
+        lastFocusedWindow = workspace.find_by_id(self.lastFocusedWindowId)
+        assert lastFocusedWindow
+        sourceIndex = self.getWindowListIndex(lastFocusedWindow)
+        assert sourceIndex is not None
+        targetIndex = (sourceIndex + delta) % len(self.windowIds)
+        self.command(f"[con_id={self.windowIds[targetIndex]}] focus")

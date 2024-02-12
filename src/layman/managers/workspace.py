@@ -29,6 +29,9 @@ class WorkspaceLayoutManager:
     overridesMoveBinds: ClassVar[
         bool
     ] = False  # Should window movement commands be sent as binds
+    overridesFocusBinds: ClassVar[
+        bool
+    ] = False  # Should focus movement commands be sent as binds
     supportsFloating: ClassVar[
         bool
     ] = False  # Should windowFloating be used, or treated as Added/Removed

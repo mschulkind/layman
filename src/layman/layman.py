@@ -373,9 +373,17 @@ class Layman:
 
         state = self.workspaceStates[workspace.name]
 
-        # Handle movement commands
-        if command.startswith("move") and (
-            not state.layout_manager or not state.layout_manager.overridesMoveBinds
+        # Handle movement and focus commands
+        if (
+            command.startswith("move")
+            and (
+                not state.layout_manager or not state.layout_manager.overridesMoveBinds
+            )
+        ) or (
+            command.startswith("focus")
+            and (
+                not state.layout_manager or not state.layout_manager.overridesFocusBinds
+            )
         ):
             self.command(command)
             self.log('Handling bind "%s" for workspace %s' % (command, workspace.name))
