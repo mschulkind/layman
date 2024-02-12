@@ -234,7 +234,8 @@ class MasterStackLayoutManager(WorkspaceLayoutManager):
             return
         masterParent = master.parent
         assert masterParent
-        self.command(f"[con_id={masterParent.id}] split none")
+        if masterParent.id != workspace.id:
+            self.command(f"[con_id={masterParent.id}] split none")
 
     def arrangeWindows(self, workspace):
         windows = workspace.leaves()
