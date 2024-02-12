@@ -16,7 +16,7 @@ You should have received a copy of the GNU General Public License along with
 layman. If not, see <https://www.gnu.org/licenses/>.
 """
 from logging import exception
-from typing import Optional
+from typing import Optional, Union
 
 import i3ipc
 import tomli
@@ -50,7 +50,9 @@ class LaymanConfig:
         except KeyError:
             return None
 
-    def getForWorkspace(self, workspace: i3ipc.Con, key: str):
+    def getForWorkspace(
+        self, workspace: i3ipc.Con, key: str
+    ) -> Union[str, int, float, None]:
         # Try to get value for the workspace
         try:
             return self.configDict[TABLE_WORKSPACE][workspace.name][key]
