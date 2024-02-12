@@ -186,7 +186,7 @@ class MasterStackLayoutManager(WorkspaceLayoutManager):
         if self.masterWidth is not None and self.windowIds:
             masterId = self.windowIds[0]
             self.command(f"[con_id={masterId}] resize set width {self.masterWidth} ppt")
-            self.logCaller(f"Set window {masterId} width to {self.masterWidth}")
+            self.logCaller(f"Set window {masterId} width to {self.masterWidth} ppt")
 
     def moveWindowCommand(self, moveId: int, targetId: int):
         self.command(f"[con_id={targetId}] mark --add move_target")
@@ -318,7 +318,14 @@ class MasterStackLayoutManager(WorkspaceLayoutManager):
             self.command(
                 f"[con_id={self.windowIds[0]}] move {self.stackSide.opposite()}"
             )
-            self.setMasterWidth()
+
+            # If the master was removed, that means the stack resized itself to full-width before we
+            # added a master back, and now that master is at default 50% width, so we need to resize
+            # it to the width of the previous master.
+            if len(self.windowIds) > 1:
+                self.command(
+                    f"[con_id={self.windowIds[0]}] resize set width {window.rect.width} px"
+                )
 
         if self.substackExists:
             # We need to rebalance the visible stack and the substack if a window was removed from
@@ -381,7 +388,15 @@ class MasterStackLayoutManager(WorkspaceLayoutManager):
             stackParent = firstStack.parent
             assert stackParent
             self.swapWindowsCommand(self.windowIds[0], stackParent.id)
-            self.setMasterWidth()
+
+            # When we move the stack from side to side, we just swap the stack and master
+            # containers, so the widths get swapped too. This means we need to resize the master
+            # back to the correct size.
+            master = workspace.find_by_id(self.windowIds[0])
+            assert master
+            self.command(
+                f"[con_id={master.id}] resize set width {master.rect.width} px"
+            )
         self.stackSide = Side.opposite(self.stackSide)
 
     def getWindowListIndex(self, window: Con) -> Optional[int]:
