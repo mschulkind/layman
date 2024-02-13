@@ -109,7 +109,7 @@ class Layman:
 
         state = self.workspaceStates[workspace.name]
         state.windowIds.add(window.id)
-        self.log(f"Adding window ID {window.id} to workspace named {workspace.name}")
+        self.log(f"Adding window ID {window.id} to workspace {workspace.name}")
         self.log(f"Workspace {workspace.name} window ids: {state.windowIds}")
 
         if len(state.windowIds) == 1:
@@ -191,9 +191,11 @@ class Layman:
             return
 
         assert workspace
-        self.log(f"window ID {event.container.id} from workspace {workspace.name}")
 
         state.windowIds.remove(event.container.id)
+        self.log(
+            f"Removed window ID {event.container.id} from workspace {workspace.name}"
+        )
         self.log(f"Workspace {workspace.name} window ids: {state.windowIds}")
 
         if state.is_excluded:
