@@ -540,13 +540,8 @@ class MasterStackLayoutManager(WorkspaceLayoutManager):
         sourceIndex = self.getWindowListIndex(window)
         if sourceIndex is None:
             return
-        targetIndex = sourceIndex + delta
-        if (targetIndex < 0) or (targetIndex >= len(self.windowIds)):
-            # Out of range
-            self.log("Move out of range")
-            return
-        else:
-            self.moveWindowToIndex(window, targetIndex)
+        targetIndex = (sourceIndex + delta) % len(self.windowIds)
+        self.moveWindowToIndex(window, targetIndex)
 
     def rotateWindows(self, workspace: Con, direction: str):
         assert direction == "cw" or direction == "ccw"
