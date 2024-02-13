@@ -310,7 +310,7 @@ class Layman:
 
         # Determine if window is floating
         i3Floating = window.floating is not None and "on" in window.floating
-        swayFloating = any(window.id == node.id for node in workspace.floating_nodes)
+        swayFloating = window.type == "floating_con"
 
         if swayFloating or i3Floating:
             # Window floating, treat like it's removed.

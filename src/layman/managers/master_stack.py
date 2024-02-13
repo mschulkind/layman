@@ -212,7 +212,9 @@ class MasterStackLayoutManager(WorkspaceLayoutManager):
             self.toggleMaximize(workspace)
 
     def isExcluded(self, window):
-        if window.floating is not None and "on" in window.floating:
+        if (
+            window.floating is not None and "on" in window.floating
+        ) or window.type == "floating_con":
             return True
 
         return False
@@ -317,7 +319,6 @@ class MasterStackLayoutManager(WorkspaceLayoutManager):
                 # New first stack or first substack
                 self.moveWindowCommand(window.id, self.windowIds[positionAtIndex])
                 self.swapWindowsCommand(window.id, self.windowIds[positionAtIndex])
-
             else:
                 self.moveWindowCommand(window.id, self.windowIds[positionAtIndex - 1])
 
