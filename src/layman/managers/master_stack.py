@@ -75,6 +75,8 @@ class MasterStackLayoutManager(WorkspaceLayoutManager):
     depthLimit: int
     substackExists: bool
     lastFocusedWindowId: Optional[int]
+    maximized: bool
+    masterWidthBeforeMaximize: int
 
     E = TypeVar("E", bound=Enum)
 
@@ -99,6 +101,11 @@ class MasterStackLayoutManager(WorkspaceLayoutManager):
         # A list of all window IDs in the workspace, with the first ID being the master and the
         # rest being the stack.
         self.windowIds = []
+        self.substackExists = False
+        self.lastFocusedWindowId = None
+        self.maximized = False
+        self.masterWidthBeforeMaximize = 0
+
         self.masterWidth = 50
         masterWidth = options.getForWorkspace(workspace, KEY_MASTER_WIDTH)
         if isinstance(masterWidth, int) and masterWidth > 0 and masterWidth < 100:
@@ -107,8 +114,6 @@ class MasterStackLayoutManager(WorkspaceLayoutManager):
             self.logError(
                 f"Invalid masterWidth of '{masterWidth}'. Must be an integer between 0 and 100 exclusive."
             )
-        self.substackExists = False
-        self.lastFocusedWindowId = None
 
         self.stackSide = (
             self.getEnumOption(workspace, options, Side, KEY_STACK_SIDE) or Side.RIGHT
@@ -203,6 +208,8 @@ class MasterStackLayoutManager(WorkspaceLayoutManager):
             self.toggleStackSide(workspace)
         elif command == "focus master":
             self.command(f"[con_id={self.windowIds[0]}] focus")
+        elif command == "maximize":
+            self.toggleMaximize(workspace)
 
     def isExcluded(self, window):
         if window.floating is not None and "on" in window.floating:
@@ -381,7 +388,6 @@ class MasterStackLayoutManager(WorkspaceLayoutManager):
             self.command(
                 f"[con_id={self.windowIds[1]}] layout {self.stackLayout.name.lower()}"
             )
-            self.log(f"Changed stackLayout to {self.stackLayout.name.lower()}")
 
     def createSubstackIfNeeded(self):
         if self.shouldSubstackExist() and not self.substackExists:
@@ -401,12 +407,14 @@ class MasterStackLayoutManager(WorkspaceLayoutManager):
             self.substackExists = False
 
     def toggleStackLayout(self):
-        self.destroySubstackIfExists()
-
         self.stackLayout = self.stackLayout.nextChoice()
-        self.setStackLayout()
 
-        self.createSubstackIfNeeded()
+        if not self.maximized:
+            self.destroySubstackIfExists()
+            self.setStackLayout()
+            self.createSubstackIfNeeded()
+
+        self.log(f"Changed stackLayout to {self.stackLayout.name.lower()}")
 
     def toggleStackSide(self, workspace: Con):
         if len(self.windowIds) >= 2:
@@ -452,7 +460,17 @@ class MasterStackLayoutManager(WorkspaceLayoutManager):
         masterId = self.windowIds[0]
         topOfStackId = self.windowIds[1]
         substackRebalanced = False
-        if (sourceIndex == 0 and targetIndex == 1) or (
+        if self.maximized:
+            if targetIndex == 0:
+                self.moveWindowCommand(window.id, self.windowIds[0])
+                self.swapWindowsCommand(window.id, self.windowIds[0])
+            else:
+                if targetIndex < sourceIndex:
+                    moveTarget = targetIndex - 1
+                else:
+                    moveTarget = targetIndex
+                self.moveWindowCommand(window.id, self.windowIds[moveTarget])
+        elif (sourceIndex == 0 and targetIndex == 1) or (
             sourceIndex == 1 and targetIndex == 0
         ):
             self.swapWindowsCommand(masterId, topOfStackId)
@@ -573,6 +591,15 @@ class MasterStackLayoutManager(WorkspaceLayoutManager):
         assert sourceIndex is not None
         isMaster = window.id == self.windowIds[0]
 
+        if self.maximized:
+            if toSide == Side.RIGHT:
+                targetIndex = sourceIndex + 1
+            else:
+                targetIndex = sourceIndex - 1
+            targetIndex %= len(self.windowIds)
+            self.moveWindowToIndex(window, targetIndex)
+            return
+
         if self.stackLayout in (StackLayout.TABBED, StackLayout.SPLITH):
             if self.stackSide == Side.LEFT:
                 # Master towards the stack, or bottom of stack away from the stack
@@ -608,3 +635,37 @@ class MasterStackLayoutManager(WorkspaceLayoutManager):
         assert sourceIndex is not None
         targetIndex = (sourceIndex + delta) % len(self.windowIds)
         self.command(f"[con_id={self.windowIds[targetIndex]}] focus")
+
+    def toggleMaximize(self, workspace):
+        if len(self.windowIds) >= 2:
+            if not self.maximized:
+                # Once we maximize, we'll lose the original master width, so we need to store it now so we
+                # can restore it later when unmaximizing.
+                master = workspace.find_by_id(self.windowIds[0])
+                assert master
+                self.masterWidthBeforeMaximize = master.rect.width
+
+                self.destroySubstackIfExists()
+
+                self.moveWindowCommand(self.windowIds[0], self.windowIds[1])
+                self.swapWindowsCommand(self.windowIds[0], self.windowIds[1])
+                self.command(f"[con_id={self.windowIds[0]}] layout tabbed")
+            else:
+                # Turn the stack back vertical.
+                self.command(f"[con_id={self.windowIds[0]}] layout splitv")
+                self.createSubstackIfNeeded()
+                # Move the first window horizontally to create the master again.
+                self.command(
+                    f"[con_id={self.windowIds[0]}] move {self.stackSide.opposite()}"
+                )
+                # Restore the master's previous width.
+                self.command(
+                    f"[con_id={self.windowIds[0]}] resize set width {self.masterWidthBeforeMaximize} px"
+                )
+                self.setStackLayout()
+
+        self.maximized = not self.maximized
+        if self.maximized:
+            self.log("Maximized")
+        else:
+            self.log("Unmaximized")
