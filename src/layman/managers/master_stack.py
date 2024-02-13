@@ -342,7 +342,7 @@ class MasterStackLayoutManager(WorkspaceLayoutManager):
         self.windowIds.remove(window.id)
         self.log(f"window ids: {self.windowIds}")
 
-        if sourceIndex == 0:
+        if sourceIndex == 0 and len(self.windowIds) >= 2:
             # Master was removed.
             self.command(
                 f"[con_id={self.windowIds[0]}] move {self.stackSide.opposite()}"
