@@ -24,6 +24,7 @@ import sys
 from collections.abc import Callable
 from contextlib import contextmanager
 from dataclasses import dataclass, field
+from datetime import datetime
 from importlib.machinery import SourceFileLoader
 from queue import SimpleQueue
 from typing import Any, Optional, Type, cast
@@ -538,16 +539,23 @@ class Layman:
                 self.logCaller("Path to user config does not exist: %s" % configPath)
                 exit()
 
+    def getCurrentTimestamp(self) -> str:
+        current_time = datetime.now()
+        return current_time.strftime("%Y-%m-%d %H:%M:%S.%f")[:-3]
+
     def log(self, msg):
         if self.options.getDefault(config.KEY_DEBUG):
-            print("%s: %s" % (inspect.stack()[1][3], msg))
+            print(f"[{self.getCurrentTimestamp()}] {inspect.stack()[1][3]}: {msg}")
 
     def logCaller(self, msg):
         if self.options.getDefault(config.KEY_DEBUG):
-            print("%s: %s" % (inspect.stack()[2][3], msg))
+            print(f"[{self.getCurrentTimestamp()}] {inspect.stack()[2][3]}: {msg}")
 
     def logError(self, msg):
-        print("%s: %s" % (inspect.stack()[1][3], msg), file=sys.stderr)
+        print(
+            f"[{self.getCurrentTimestamp()}] {inspect.stack()[1][3]}: {msg}",
+            file=sys.stderr,
+        )
 
     def run(self):
         self.conn = Connection()
