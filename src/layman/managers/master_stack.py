@@ -15,6 +15,7 @@ A PARTICULAR PURPOSE. See the GNU General Public License for more details.
 You should have received a copy of the GNU General Public License along with
 layman. If not, see <https://www.gnu.org/licenses/>.
 """
+import pprint
 from enum import Enum
 from typing import Optional, Type, TypeVar
 
@@ -360,9 +361,15 @@ class MasterStackLayoutManager(WorkspaceLayoutManager):
             # added a master back, and now that master is at default 50% width, so we need to resize
             # it to the width of the previous master.
             if len(self.windowIds) > 1:
-                self.command(
-                    f"[con_id={self.windowIds[0]}] resize set width {window.rect.width} px"
-                )
+                if window.rect.width == 0:
+                    # Not sure why width would ever be 0, but I've seen this. Smells a lot like a
+                    # bug somewhere.
+                    self.log(f"window with width 0 popped. likely a bug.")
+                    self.log(pprint.pformat(window.__dict__))
+                else:
+                    self.command(
+                        f"[con_id={self.windowIds[0]}] resize set width {window.rect.width} px"
+                    )
 
         if self.substackExists:
             # We need to rebalance the visible stack and the substack if a window was removed from
