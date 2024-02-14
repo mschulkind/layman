@@ -349,7 +349,7 @@ class Layman:
 
     def onBinding(self, event: BindingEvent):
         # Handle chained commands one at a time
-        command: str = event.ipc_data["binding"]["command"].strip()
+        command: str = event.binding.command.strip()
         # We only want to handle this binding if the first command is a "nop layman" command. If it
         # is, then we split all commands by ';' and either handle them ourselves if it is a layman
         # command or pass it on to i3/Sway if it is not.
@@ -585,6 +585,10 @@ class Layman:
                 if isinstance(event, WorkspaceEvent):
                     event = cast(WorkspaceEvent, event)
                     if event.change == "init":
+                        assert event.current is not None
+                        self.log(
+                            f"Handling workspace 'init' event for workspace {event.current.name}"
+                        )
                         self.onWorkspaceInit(event)
                     else:
                         raise RuntimeError(
@@ -592,6 +596,9 @@ class Layman:
                         )
                 elif isinstance(event, BindingEvent):
                     event = cast(BindingEvent, event)
+                    self.log(
+                        f"Handling binding event for command '{event.binding.command}'"
+                    )
                     self.onBinding(event)
                 elif isinstance(event, WindowEvent):
                     # Because the i3ipc.Con that comes with a WindowEvent does not contain the
@@ -633,6 +640,9 @@ class Layman:
                         "move": self.windowMoved,
                     }
                     if event.change in handlers:
+                        self.log(
+                            f"Handling window '{event.change}' event for window id {event.container.id}"
+                        )
                         handlers[event.change](event, tree, workspace, window)
                     else:
                         raise RuntimeError(
