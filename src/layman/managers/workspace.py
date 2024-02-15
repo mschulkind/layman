@@ -16,7 +16,7 @@ You should have received a copy of the GNU General Public License along with
 layman. If not, see <https://www.gnu.org/licenses/>.
 """
 import inspect
-from typing import ClassVar
+from typing import ClassVar, Optional
 
 import i3ipc
 from layman.config import KEY_DEBUG, LaymanConfig
@@ -37,24 +37,29 @@ class WorkspaceLayoutManager:
     ] = False  # Should windowFloating be used, or treated as Added/Removed
 
     con: i3ipc.Connection
-    workspaceId: int
     workspaceName: str
 
     # These are the functions you should override to implement a WLM.
     #
     # Parameters:
     # con (i3ipc.Connection): An i3ipc connection for executing commands.
-    # workspace (i3ipc.Con):
+    # workspace (Optional[i3ipc.Con]):
     #     The i3ipc.Con of the workspace the layout manager is associated with. This includes all
-    #     windows on the workspace at the time of initialization.
+    #     windows on the workspace at the time of initialization. If this is called while the
+    #     workspace is empty and not focused, it may not exist in the tree, so this argument may be
+    #     None.
+    # workspaceName (str): The name of the workspace. This exists in case workspace is None.
     # options (LaymanConfig): The loaded config file used for option defaults.
     def __init__(
-        self, con: i3ipc.Connection, workspace: i3ipc.Con, options: LaymanConfig
+        self,
+        con: i3ipc.Connection,
+        workspace: Optional[i3ipc.Con],
+        workspaceName: str,
+        options: LaymanConfig,
     ):
         self.con = con
-        self.workspaceId = workspace.id
-        self.workspaceName = workspace.name
-        self.debug = options.getForWorkspace(workspace, KEY_DEBUG)
+        self.workspaceName = workspaceName
+        self.debug = options.getForWorkspace(workspaceName, KEY_DEBUG)
 
     # windowAdded is called when a new window is added to the workspace,
     # either by being created on the workspace or moved to it from another.
@@ -64,9 +69,14 @@ class WorkspaceLayoutManager:
         pass
 
     # windowRemoved is called when a window is removed from the workspace,
-    # either by being closed or moved to a different workspace.
+    # either by being closed or moved to a different workspace. If the workspace
+    # is not focused when the last window is removed, the workspace ceases to exist
+    # before windowRemoved is called, so the workspace argument can sometimes be None.
     def windowRemoved(
-        self, event: i3ipc.WindowEvent, workspace: i3ipc.Con, window: i3ipc.Con
+        self,
+        event: i3ipc.WindowEvent,
+        workspace: Optional[i3ipc.Con],
+        window: i3ipc.Con,
     ):
         pass
 

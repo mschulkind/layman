@@ -82,9 +82,9 @@ class MasterStackLayoutManager(WorkspaceLayoutManager):
     E = TypeVar("E", bound=Enum)
 
     def getEnumOption(
-        self, workspace: Con, options: LaymanConfig, enum_class: Type[E], key: str
+        self, workspaceName: str, options: LaymanConfig, enum_class: Type[E], key: str
     ) -> Optional[E]:
-        value = options.getForWorkspace(workspace, key)
+        value = options.getForWorkspace(workspaceName, key)
         try:
             if value is not None:
                 if not isinstance(value, str):
@@ -97,8 +97,8 @@ class MasterStackLayoutManager(WorkspaceLayoutManager):
             )
         return None
 
-    def __init__(self, con, workspace, options):
-        super().__init__(con, workspace, options)
+    def __init__(self, con, workspace, workspaceName, options):
+        super().__init__(con, workspace, workspaceName, options)
         # A list of all window IDs in the workspace, with the first ID being the master and the
         # rest being the stack.
         self.windowIds = []
@@ -108,7 +108,7 @@ class MasterStackLayoutManager(WorkspaceLayoutManager):
         self.masterWidthBeforeMaximize = 0
 
         self.masterWidth = 50
-        masterWidth = options.getForWorkspace(workspace, KEY_MASTER_WIDTH)
+        masterWidth = options.getForWorkspace(workspaceName, KEY_MASTER_WIDTH)
         if isinstance(masterWidth, int) and masterWidth > 0 and masterWidth < 100:
             self.masterWidth = masterWidth
         elif masterWidth is not None:
@@ -117,14 +117,15 @@ class MasterStackLayoutManager(WorkspaceLayoutManager):
             )
 
         self.stackSide = (
-            self.getEnumOption(workspace, options, Side, KEY_STACK_SIDE) or Side.RIGHT
+            self.getEnumOption(workspaceName, options, Side, KEY_STACK_SIDE)
+            or Side.RIGHT
         )
         self.stackLayout = (
-            self.getEnumOption(workspace, options, StackLayout, KEY_STACK_LAYOUT)
+            self.getEnumOption(workspaceName, options, StackLayout, KEY_STACK_LAYOUT)
             or StackLayout.SPLITV
         )
 
-        depthLimit = options.getForWorkspace(workspace, KEY_DEPTH_LIMIT) or 0
+        depthLimit = options.getForWorkspace(workspaceName, KEY_DEPTH_LIMIT) or 0
         if not isinstance(depthLimit, int) or depthLimit < 0 or depthLimit == 1:
             self.logError(
                 f"Invalid depthLimit '{depthLimit}'. Must be an integer greater than 1."
@@ -134,7 +135,8 @@ class MasterStackLayoutManager(WorkspaceLayoutManager):
             self.depthLimit = depthLimit
 
         # If windows exist, fit them into MasterStack
-        self.arrangeWindows(workspace)
+        if workspace:
+            self.arrangeWindows(workspace)
 
     def windowAdded(self, event, workspace, window):
         # Ignore excluded windows
@@ -150,7 +152,7 @@ class MasterStackLayoutManager(WorkspaceLayoutManager):
         if self.isExcluded(window):
             return
 
-        self.popWindow(workspace, window)
+        self.popWindow(window)
 
     def windowFocused(self, event, workspace, window):
         # Ignore excluded windows
@@ -247,7 +249,7 @@ class MasterStackLayoutManager(WorkspaceLayoutManager):
         if masterParent.id != workspace.id:
             self.command(f"[con_id={masterParent.id}] split none")
 
-    def arrangeWindows(self, workspace):
+    def arrangeWindows(self, workspace: Con):
         windows = workspace.leaves()
         if not windows:
             return
@@ -341,7 +343,7 @@ class MasterStackLayoutManager(WorkspaceLayoutManager):
             self.setMasterWidth()
             self.removeExtraNesting(workspace)
 
-    def popWindow(self, workspace: Con, window: Con):
+    def popWindow(self, window: Con):
         self.log(f"Removing window id: {window.id}")
         sourceIndex = self.getWindowListIndex(window)
         if sourceIndex is None:

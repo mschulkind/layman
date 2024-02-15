@@ -51,11 +51,11 @@ class LaymanConfig:
             return None
 
     def getForWorkspace(
-        self, workspace: i3ipc.Con, key: str
+        self, workspaceName: str, key: str
     ) -> Union[str, int, float, None]:
         # Try to get value for the workspace
         try:
-            return self.configDict[TABLE_WORKSPACE][workspace.name][key]
+            return self.configDict[TABLE_WORKSPACE][workspaceName][key]
         except KeyError:
             pass
 
