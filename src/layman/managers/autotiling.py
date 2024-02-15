@@ -25,9 +25,9 @@ KEY_DEPTH_LIMIT = "depthLimit"
 class AutotilingLayoutManager(WorkspaceLayoutManager):
     shortName = "Autotiling"
 
-    def __init__(self, con, workspace, options):
-        super().__init__(con, workspace, options)
-        self.depthLimit = options.getForWorkspace(workspace, KEY_DEPTH_LIMIT) or 0
+    def __init__(self, con, workspace, workspaceName, options):
+        super().__init__(con, workspace, workspaceName, options)
+        self.depthLimit = options.getForWorkspace(workspaceName, KEY_DEPTH_LIMIT) or 0
 
     def isExcluded(self, window):
         if window is None:

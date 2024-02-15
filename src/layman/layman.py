@@ -53,15 +53,22 @@ class WorkspaceState:
 
 
 @contextmanager
-def layoutManagerReloader(layman: "Layman", workspace: Con):
+def layoutManagerReloader(
+    layman: "Layman", workspace: Optional[Con], workspaceName: Optional[str] = None
+):
+    if not workspaceName:
+        assert workspace
+        workspaceName = workspace.name
+    assert workspaceName
+
     try:
         yield None
     except BaseException as e:
         logging.exception(e)
         layman.log(
-            f"Reloading layout manager for workspace {workspace.name} after exception"
+            f"Reloading layout manager for workspace {workspaceName} after exception"
         )
-        layman.setWorkspaceLayout(workspace)
+        layman.setWorkspaceLayout(workspace, workspaceName)
 
 
 class Layman:
@@ -176,13 +183,22 @@ class Layman:
         window: Optional[Con],
     ):
         state = None
+        workspaceName = None
         # Try to find workspace by locating where the window is recorded
-        for workspaceName, workspaceState in self.workspaceStates.items():
-            if event.container.id in workspaceState.windowIds:
-                workspace = next(
-                    w for w in tree.workspaces() if w.name == workspaceName
-                )
-                state = workspaceState
+        for n, s in self.workspaceStates.items():
+            if event.container.id in s.windowIds:
+                state = s
+                workspaceName = n
+                try:
+                    workspace = next(
+                        w for w in tree.workspaces() if w.name == workspaceName
+                    )
+                except StopIteration:
+                    # This can happen if the last window is closed while the workspace is not
+                    # focused.
+                    pass
+
+                break
 
         if not state:
             # This is hopefully a window that appeared and then
@@ -190,13 +206,13 @@ class Layman:
             self.log("workspace not found")
             return
 
-        assert workspace
+        assert workspaceName
 
         state.windowIds.remove(event.container.id)
         self.log(
-            f"Removed window ID {event.container.id} from workspace {workspace.name}"
+            f"Removed window ID {event.container.id} from workspace {workspaceName}"
         )
-        self.log(f"Workspace {workspace.name} window ids: {state.windowIds}")
+        self.log(f"Workspace {workspaceName} window ids: {state.windowIds}")
 
         if state.isExcluded:
             self.log("Workspace excluded")
@@ -205,9 +221,9 @@ class Layman:
         # Pass command to the appropriate manager
         if state.layoutManager:
             self.log(
-                f"Calling windowRemoved for window id {event.container.id} on workspace {workspace.name}"
+                f"Calling windowRemoved for window id {event.container.id} on workspace {workspaceName}"
             )
-            with layoutManagerReloader(self, workspace):
+            with layoutManagerReloader(self, workspace, workspaceName):
                 state.layoutManager.windowRemoved(event, workspace, event.container)
 
     def windowMoved(
@@ -399,7 +415,7 @@ class Layman:
         # Handle wlm creation commands
         if "layout" in command:
             shortName = command.split(" ")[1]
-            self.setWorkspaceLayout(workspace, shortName)
+            self.setWorkspaceLayout(workspace, workspace.name, shortName)
             return
 
         # Pass unknown command to the appropriate wlm
@@ -462,9 +478,11 @@ class Layman:
         state.windowIds = set(w.id for w in workspace.leaves())
         self.log(f"Workspace {workspace.name} window ids: {state.windowIds}")
 
-        defaultLayout = str(self.options.getForWorkspace(workspace, config.KEY_LAYOUT))
+        defaultLayout = str(
+            self.options.getForWorkspace(workspace.name, config.KEY_LAYOUT)
+        )
         if defaultLayout and not state.isExcluded:
-            self.setWorkspaceLayout(workspace, defaultLayout)
+            self.setWorkspaceLayout(workspace, workspace.name, defaultLayout)
 
     def getLayoutByShortName(self, shortName):
         if shortName in self.builtinLayouts:
@@ -485,8 +503,13 @@ class Layman:
             self.command(f"[con_id={leaves[0].id}] split none")
             self.command(f"[con_id={leaves[0].id}] layout {state.layoutName}")
 
-    def setWorkspaceLayout(self, workspace: Con, layoutName: Optional[str] = None):
-        state = self.workspaceStates[workspace.name]
+    def setWorkspaceLayout(
+        self,
+        workspace: Optional[Con],
+        workspaceName: str,
+        layoutName: Optional[str] = None,
+    ):
+        state = self.workspaceStates[workspaceName]
 
         # If no layoutName is passed, we replace any current layout manager with a new copy of
         # that same layout manager, if any.
@@ -498,7 +521,7 @@ class Layman:
 
         if state.isExcluded:
             self.logError(
-                f"Attempting to set layout for excluded workspace {workspace.name}"
+                f"Attempting to set layout for excluded workspace {workspaceName}"
             )
             return
         #
@@ -513,11 +536,11 @@ class Layman:
             layout_manager_class = self.getLayoutByShortName(layoutName)
             if layout_manager_class:
                 state.layoutManager = layout_manager_class(
-                    self.conn, workspace, self.options
+                    self.conn, workspace, workspaceName, self.options
                 )
         if layout_manager_class or layoutName == "none" or state.layoutName != "none":
             self.log(
-                "Initialized workspace %s with layout %s" % (workspace.name, layoutName)
+                "Initialized workspace %s with layout %s" % (workspaceName, layoutName)
             )
         else:
             self.log("Can't find layout manager named %s" % layoutName)
