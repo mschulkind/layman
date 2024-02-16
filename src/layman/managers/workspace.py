@@ -25,7 +25,7 @@ from layman.config import KEY_DEBUG, LaymanConfig
 class WorkspaceLayoutManager:
     # These properties should be overriden to configure your WLM as
     # needed.
-    shortName: ClassVar[str]
+    shortName: ClassVar[str] = "none"
     overridesMoveBinds: ClassVar[
         bool
     ] = False  # Should window movement commands be sent as binds

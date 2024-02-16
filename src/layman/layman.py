@@ -86,6 +86,7 @@ class Layman:
         # Get builtin layouts
         self.builtinLayouts = {}
         for builtin_layout in [
+            WorkspaceLayoutManager,
             AutotilingLayoutManager,
             MasterStackLayoutManager,
             GridLayoutManager,
@@ -114,25 +115,7 @@ class Layman:
             self.log("no window found")
             return
 
-        state = self.workspaceStates[workspace.name]
-        state.windowIds.add(window.id)
-        self.log(f"Adding window ID {window.id} to workspace {workspace.name}")
-        self.log(f"Workspace {workspace.name} window ids: {state.windowIds}")
-
-        if len(state.windowIds) == 1:
-            self.setWorkspaceLayoutCommand(workspace)
-
-        # Check if we should pass this call to a manager
-        if state.isExcluded:
-            self.log("Workspace excluded")
-            return
-
-        if state.layoutManager:
-            self.log(
-                f"Calling windowAdded for window id {window.id} on workspace {workspace.name}"
-            )
-            with layoutManagerReloader(self, workspace):
-                state.layoutManager.windowAdded(event, workspace, window)
+        self.handleWindowAdded(event, workspace, window)
 
     def windowFocused(
         self,
@@ -196,6 +179,9 @@ class Layman:
                 except StopIteration:
                     # This can happen if the last window is closed while the workspace is not
                     # focused.
+                    self.log(
+                        f"found workspace {n} state for window id {event.container.id}, but not container"
+                    )
                     pass
 
                 break
@@ -206,25 +192,7 @@ class Layman:
             self.log("workspace not found")
             return
 
-        assert workspaceName
-
-        state.windowIds.remove(event.container.id)
-        self.log(
-            f"Removed window ID {event.container.id} from workspace {workspaceName}"
-        )
-        self.log(f"Workspace {workspaceName} window ids: {state.windowIds}")
-
-        if state.isExcluded:
-            self.log("Workspace excluded")
-            return
-
-        # Pass command to the appropriate manager
-        if state.layoutManager:
-            self.log(
-                f"Calling windowRemoved for window id {event.container.id} on workspace {workspaceName}"
-            )
-            with layoutManagerReloader(self, workspace, workspaceName):
-                state.layoutManager.windowRemoved(event, workspace, event.container)
+        self.handleWindowRemoved(event, workspace, workspaceName, window)
 
     def windowMoved(
         self,
@@ -241,10 +209,6 @@ class Layman:
         assert window
 
         to_state = self.workspaceStates[to_workspace.name]
-
-        if to_state.isExcluded:
-            self.log("Workspace excluded")
-            return
 
         from_workspace_name, from_state = next(
             (name, state)
@@ -268,30 +232,8 @@ class Layman:
                     )
         else:
             # Window moving between two workspaces.
-            from_state.windowIds.remove(window.id)
-            self.log(
-                f"Workspace {from_workspace.name} window ids: {from_state.windowIds}"
-            )
-            if from_state.layoutManager:
-                self.log(
-                    f"Calling windowRemoved for window id {window.id} on workspace {from_workspace.name}"
-                )
-                with layoutManagerReloader(self, from_workspace):
-                    from_state.layoutManager.windowRemoved(
-                        event, from_workspace, event.container
-                    )
-
-            to_state.windowIds.add(window.id)
-            self.log(f"Workspace {to_workspace.name} window ids: {to_state.windowIds}")
-            if to_state.layoutManager:
-                self.log(
-                    f"Calling windowAdded for window id {window.id} on workspace {to_workspace.name}"
-                )
-                with layoutManagerReloader(self, to_workspace):
-                    to_state.layoutManager.windowAdded(event, to_workspace, window)
-            else:
-                if len(to_state.windowIds) == 1:
-                    self.setWorkspaceLayoutCommand(to_workspace)
+            self.handleWindowRemoved(event, from_workspace, None, window)
+            self.handleWindowAdded(event, to_workspace, window)
 
     def windowFloating(
         self,
@@ -312,11 +254,8 @@ class Layman:
             self.log("Workspace excluded")
             return
 
-        if not state.layoutManager:
-            return
-
         # Only send windowFloating event if wlm supports it
-        if state.layoutManager.supportsFloating:
+        if state.layoutManager and state.layoutManager.supportsFloating:
             self.log(
                 f"Calling windowFloating for window id {window.id} on workspace {workspace.name}"
             )
@@ -330,20 +269,10 @@ class Layman:
 
         if swayFloating or i3Floating:
             # Window floating, treat like it's removed.
-            self.log(
-                f"Calling windowRemoved for window id {window.id} on workspace {workspace.name}"
-            )
-            with layoutManagerReloader(self, workspace):
-                state.layoutManager.windowRemoved(event, workspace, window)
-            return
+            self.handleWindowRemoved(event, workspace, None, window)
         else:
             # Window is not floating, treat like a new window
-            self.log(
-                f"Calling windowAdded for window id {window.id} on workspace {workspace.name}"
-            )
-            with layoutManagerReloader(self, workspace):
-                state.layoutManager.windowAdded(event, workspace, window)
-            return
+            self.handleWindowAdded(event, workspace, window)
 
     """
     Workspace Events
@@ -495,13 +424,22 @@ class Layman:
 
     def setWorkspaceLayoutCommand(self, workspace: Con):
         state = self.workspaceStates[workspace.name]
-        leaves = workspace.leaves()
-        if len(leaves) != 1:
+        if len(state.windowIds) != 1:
             # Can't reliably set the layout with more than one leaf, so ignore it.
+            self.log(
+                f"workspace {workspace.name} has {len(state.windowIds)} windows. ignoring."
+            )
             return
-        if state.layoutName and not state.layoutManager and state.layoutName != "none":
-            self.command(f"[con_id={leaves[0].id}] split none")
-            self.command(f"[con_id={leaves[0].id}] layout {state.layoutName}")
+        if state.layoutName and not state.layoutManager:
+            self.command(f"[con_id={list(state.windowIds)[0]}] split none")
+            self.command(
+                f"[con_id={list(state.windowIds)[0]}] layout {state.layoutName}"
+            )
+        else:
+            assert state.layoutName
+            self.log(
+                f"workspace {workspace.name} has layout {state.layoutName}. ignoring."
+            )
 
     def setWorkspaceLayout(
         self,
@@ -514,10 +452,10 @@ class Layman:
         # If no layoutName is passed, we replace any current layout manager with a new copy of
         # that same layout manager, if any.
         if not layoutName:
-            if state.layoutManager:
-                layoutName = state.layoutManager.shortName
-            else:
-                layoutName = "none"
+            assert state.layoutName
+            layoutName = state.layoutName
+        else:
+            state.layoutName = layoutName
 
         if state.isExcluded:
             self.logError(
@@ -527,23 +465,79 @@ class Layman:
         #
         # Pass any built-in layouts to i3/Sway.
 
-        layout_manager_class = None
-        if layoutName == "none":
+        if layoutName in ("splitv", "splith", "tabbed", "stacking"):
             state.layoutManager = None
-        elif layoutName in ("splitv", "splith", "tabbed", "stacking"):
-            state.layoutName = layoutName
+            if workspace:
+                self.setWorkspaceLayoutCommand(workspace)
         else:
             layout_manager_class = self.getLayoutByShortName(layoutName)
             if layout_manager_class:
                 state.layoutManager = layout_manager_class(
                     self.conn, workspace, workspaceName, self.options
                 )
-        if layout_manager_class or layoutName == "none" or state.layoutName != "none":
+            else:
+                self.log(
+                    f"Can't find layout manager named {layoutName} for workspace {workspaceName}"
+                )
+                return
+
+        self.log(f"Initialized workspace {workspaceName} with layout {layoutName}")
+
+    def handleWindowAdded(self, event: WindowEvent, workspace: Con, window: Con):
+        state = self.workspaceStates[workspace.name]
+
+        state.windowIds.add(window.id)
+        self.log(f"Adding window ID {window.id} to workspace {workspace.name}")
+        self.log(f"Workspace {workspace.name} window ids: {state.windowIds}")
+
+        # Check if we should handle layouts on this workspace.
+        if state.isExcluded:
+            self.log("Workspace excluded")
+            return
+
+        if state.layoutManager:
             self.log(
-                "Initialized workspace %s with layout %s" % (workspaceName, layoutName)
+                f"Calling windowAdded for window id {window.id} on workspace {workspace.name}"
             )
+            with layoutManagerReloader(self, workspace):
+                state.layoutManager.windowAdded(event, workspace, window)
         else:
-            self.log("Can't find layout manager named %s" % layoutName)
+            self.setWorkspaceLayoutCommand(workspace)
+
+    def handleWindowRemoved(
+        self,
+        event: WindowEvent,
+        workspace: Optional[Con],
+        workspaceName: Optional[str],
+        window: Optional[Con],
+    ):
+        assert workspace or workspaceName
+        if not workspaceName:
+            assert workspace
+            workspaceName = workspace.name
+        assert workspaceName
+        state = self.workspaceStates[workspaceName]
+
+        state.windowIds.remove(event.container.id)
+        self.log(
+            f"Removing window ID {event.container.id} from workspace {workspaceName}"
+        )
+        self.log(f"Workspace {workspaceName} window ids: {state.windowIds}")
+
+        # Check if we should handle layouts on this workspace.
+        if state.isExcluded:
+            self.log("Workspace excluded")
+            return
+
+        if state.layoutManager:
+            self.log(
+                f"Calling windowRemoved for window id {event.container.id} on workspace {workspaceName}"
+            )
+            with layoutManagerReloader(self, workspace):
+                state.layoutManager.windowRemoved(event, workspace, event.container)
+        else:
+            if workspace:
+                self.setWorkspaceLayoutCommand(workspace)
 
     def createConfig(self):
         configPath = utils.getConfigPath()
