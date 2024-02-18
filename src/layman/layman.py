@@ -182,7 +182,6 @@ class Layman:
                     self.log(
                         f"found workspace {n} state for window id {event.container.id}, but not container"
                     )
-                    pass
 
                 break
 
@@ -570,7 +569,7 @@ class Layman:
 
     def run(self):
         self.conn = Connection()
-        self.notificationQueue = SimpleQueue()
+        notificationQueue = SimpleQueue()
 
         # In order to shrink the window for race conditions as much as possible, we get the full
         # current container tree, and then immediately set up all listeners before continuing on
@@ -578,8 +577,8 @@ class Layman:
         # until calling Connection#main(), so we do that here, while delaying any callbacks, so that
         # we don't miss any notifications.
         tree = self.conn.get_tree()
-        self.listenerThread = ListenerThread(self.notificationQueue)
-        self.messageServer = MessageServer(self.notificationQueue)
+        ListenerThread(notificationQueue)
+        MessageServer(notificationQueue)
 
         # Set default layout mangers for existing workspaces
         for workspace in tree.workspaces():
@@ -588,7 +587,7 @@ class Layman:
         # Start handling events
         self.log("layman started")
         while True:
-            notification: dict[str, Any] = self.notificationQueue.get()
+            notification: dict[str, Any] = notificationQueue.get()
             if notification["type"] == "event":
                 event = notification["event"]
                 if isinstance(event, WorkspaceEvent):
