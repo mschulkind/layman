@@ -29,18 +29,13 @@ from importlib.machinery import SourceFileLoader
 from queue import SimpleQueue
 from typing import Any, Optional, Type, cast
 
-from i3ipc import BindingEvent, Con, Connection, Event, WindowEvent, WorkspaceEvent
-from i3ipc.events import IpcBaseEvent
+from i3ipc import BindingEvent, Con, Connection, WindowEvent, WorkspaceEvent
 from setproctitle import setproctitle
 
 from layman import config, utils
 from layman.listener import ListenerThread
-from layman.managers import (
-    AutotilingLayoutManager,
-    GridLayoutManager,
-    MasterStackLayoutManager,
-    WorkspaceLayoutManager,
-)
+from layman.managers import (AutotilingLayoutManager, GridLayoutManager,
+                             MasterStackLayoutManager, WorkspaceLayoutManager)
 from layman.server import MessageServer
 
 
