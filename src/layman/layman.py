@@ -34,8 +34,12 @@ from setproctitle import setproctitle
 
 from layman import config, utils
 from layman.listener import ListenerThread
-from layman.managers import (AutotilingLayoutManager, GridLayoutManager,
-                             MasterStackLayoutManager, WorkspaceLayoutManager)
+from layman.managers import (
+    AutotilingLayoutManager,
+    GridLayoutManager,
+    MasterStackLayoutManager,
+    WorkspaceLayoutManager,
+)
 from layman.server import MessageServer
 
 
@@ -110,6 +114,10 @@ class Layman:
             self.log("no window found")
             return
 
+        state = self.workspaceStates[workspace.name]
+        state.windowIds.add(window.id)
+        self.log(f"Adding window ID {window.id} to workspace {workspace.name}")
+        self.log(f"Workspace {workspace.name} window ids: {state.windowIds}")
         self.handleWindowAdded(event, workspace, window)
 
     def windowFocused(
@@ -186,6 +194,11 @@ class Layman:
             self.log("workspace not found")
             return
 
+        state.windowIds.remove(event.container.id)
+        self.log(
+            f"Removing window ID {event.container.id} from workspace {workspaceName}"
+        )
+        self.log(f"Workspace {workspaceName} window ids: {state.windowIds}")
         self.handleWindowRemoved(event, workspace, workspaceName, window)
 
     def windowMoved(
@@ -226,7 +239,9 @@ class Layman:
                     )
         else:
             # Window moving between two workspaces.
+            from_state.windowIds.remove(window.id)
             self.handleWindowRemoved(event, from_workspace, None, window)
+            to_state.windowIds.add(window.id)
             self.handleWindowAdded(event, to_workspace, window)
 
     def windowFloating(
@@ -243,12 +258,12 @@ class Layman:
             return
         state = self.workspaceStates[workspace.name]
 
-        # Check if we should pass this call to a manager
+        # Check if we should pass this call to a layout manager
         if state.isExcluded:
             self.log("Workspace excluded")
             return
 
-        # Only send windowFloating event if wlm supports it
+        # Only send windowFloating event if the layout manager supports it
         if state.layoutManager and state.layoutManager.supportsFloating:
             self.log(
                 f"Calling windowFloating for window id {window.id} on workspace {workspace.name}"
@@ -480,10 +495,6 @@ class Layman:
     def handleWindowAdded(self, event: WindowEvent, workspace: Con, window: Con):
         state = self.workspaceStates[workspace.name]
 
-        state.windowIds.add(window.id)
-        self.log(f"Adding window ID {window.id} to workspace {workspace.name}")
-        self.log(f"Workspace {workspace.name} window ids: {state.windowIds}")
-
         # Check if we should handle layouts on this workspace.
         if state.isExcluded:
             self.log("Workspace excluded")
@@ -511,12 +522,6 @@ class Layman:
             workspaceName = workspace.name
         assert workspaceName
         state = self.workspaceStates[workspaceName]
-
-        state.windowIds.remove(event.container.id)
-        self.log(
-            f"Removing window ID {event.container.id} from workspace {workspaceName}"
-        )
-        self.log(f"Workspace {workspaceName} window ids: {state.windowIds}")
 
         # Check if we should handle layouts on this workspace.
         if state.isExcluded:
