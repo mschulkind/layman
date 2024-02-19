@@ -17,6 +17,7 @@ You should have received a copy of the GNU General Public License along with
 layman. If not, see <https://www.gnu.org/licenses/>.
 """
 import inspect
+import itertools
 import logging
 import os
 import shutil
@@ -47,6 +48,7 @@ from layman.server import MessageServer
 class WorkspaceState:
     layoutManager: Optional[WorkspaceLayoutManager] = None
     layoutName: str = "none"
+    # The set of all window IDs on the workspace, including floating windows.
     windowIds: set[int] = field(default_factory=set)
     isExcluded: bool = False
 
@@ -413,7 +415,9 @@ class Layman:
             self.options.getDefault(config.KEY_EXCLUDED_WORKSPACES) or []
         )
 
-        state.windowIds = set(w.id for w in workspace.leaves())
+        state.windowIds = set(
+            w.id for w in itertools.chain(workspace.leaves(), workspace.floating_nodes)
+        )
         self.log(f"Workspace {workspace.name} window ids: {state.windowIds}")
 
         defaultLayout = str(

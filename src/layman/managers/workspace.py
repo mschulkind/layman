@@ -19,6 +19,7 @@ import inspect
 from typing import ClassVar, Optional
 
 import i3ipc
+
 from layman.config import KEY_DEBUG, LaymanConfig
 
 
