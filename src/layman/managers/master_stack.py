@@ -20,6 +20,7 @@ from enum import Enum
 from typing import Optional, Type, TypeVar
 
 from i3ipc import Con
+
 from layman.config import LaymanConfig
 from layman.managers.workspace import WorkspaceLayoutManager
 
@@ -67,8 +68,13 @@ class MasterStackLayoutManager(WorkspaceLayoutManager):
     shortName = "MasterStack"
     overridesMoveBinds = True
     overridesFocusBinds = True
+    supportsFloating = True
 
+    # A list of all window IDs, excluding floating windows, in the workspace, with the first ID
+    # being the master and the rest being the stack.
     windowIds: list[int]
+    # A set of all window ID of floating windows in the workspace.
+    floatingWindowIds: set[int]
 
     masterWidth: int
     stackLayout: StackLayout
@@ -93,15 +99,14 @@ class MasterStackLayoutManager(WorkspaceLayoutManager):
                 return enum_class[value.upper()]
         except KeyError:
             self.logError(
-                f"Invalid {key} '{value}'. Must be in {[l.name.lower() for l in enum_class]}."
+                f"Invalid {key} '{value}'. Must be in {[e.name.lower() for e in enum_class]}."
             )
         return None
 
     def __init__(self, con, workspace, workspaceName, options):
         super().__init__(con, workspace, workspaceName, options)
-        # A list of all window IDs in the workspace, with the first ID being the master and the
-        # rest being the stack.
         self.windowIds = []
+        self.floatingWindowIds = set()
         self.substackExists = False
         self.lastFocusedWindowId = None
         self.maximized = False
@@ -137,29 +142,49 @@ class MasterStackLayoutManager(WorkspaceLayoutManager):
         # If windows exist, fit them into MasterStack
         if workspace:
             self.arrangeWindows(workspace)
+            self.floatingWindowIds = set(w.id for w in workspace.floating_nodes)
+            self.log(f"floating window ids: {self.floatingWindowIds}")
 
     def windowAdded(self, event, workspace, window):
-        # Ignore excluded windows
-        if self.isExcluded(window):
+        if self.isFloating(window):
+            # We do nothing other than track floating windows.
+            self.floatingWindowIds.add(window.id)
+            self.log(f"floating window ids: {self.floatingWindowIds}")
             return
 
         self.pushWindow(workspace, window)
-
-        self.log("Added window id: %d" % window.id)
+        self.log(f"Added window id: {window.id}")
 
     def windowRemoved(self, event, workspace, window):
-        # Ignore excluded windows
-        if self.isExcluded(window):
+        if self.isFloating(window):
+            if window.id in self.floatingWindowIds:
+                # We do nothing other than track floating windows.
+                self.floatingWindowIds.remove(window.id)
+                self.log(f"floating window ids: {self.floatingWindowIds}")
+            else:
+                self.logError(f"Floating window ID {window.id} not found")
             return
 
         self.popWindow(window)
+        self.log(f"Removed window id: {window.id}")
 
     def windowFocused(self, event, workspace, window):
-        # Ignore excluded windows
-        if self.isExcluded(window):
+        if self.isFloating(window):
             return
 
         self.lastFocusedWindowId = window.id
+
+    def windowFloating(self, event, workspace, window):
+        if self.isFloating(window):
+            self.log(f"Transitioning window id {window.id} to floating.")
+            self.popWindow(window)
+            self.floatingWindowIds.add(window.id)
+            self.log(f"floating window ids: {self.floatingWindowIds}")
+        else:
+            self.log(f"Transitioning window id {window.id} to not floating.")
+            self.floatingWindowIds.remove(window.id)
+            self.log(f"floating window ids: {self.floatingWindowIds}")
+            self.pushWindow(workspace, window)
 
     def onCommand(self, command, workspace):
         self.log(f"received command '{command}' with window ids {self.windowIds}")
@@ -192,7 +217,7 @@ class MasterStackLayoutManager(WorkspaceLayoutManager):
                     return
                 except ValueError:
                     pass
-            self.log(f"Usage: move to index <i>")
+            self.log("Usage: move to index <i>")
         elif command == "focus up":
             self.focusWindowRelative(workspace, -1)
         elif command == "focus down":
@@ -214,13 +239,10 @@ class MasterStackLayoutManager(WorkspaceLayoutManager):
         elif command == "maximize":
             self.toggleMaximize(workspace)
 
-    def isExcluded(self, window):
-        if (
-            window.floating is not None and "on" in window.floating
-        ) or window.type == "floating_con":
-            return True
-
-        return False
+    def isFloating(self, window: Con) -> bool:
+        i3Floating = window.floating is not None and "on" in window.floating
+        swayFloating = window.type == "floating_con"
+        return swayFloating or i3Floating
 
     def setMasterWidth(self):
         if self.masterWidth is not None and self.windowIds:
@@ -240,6 +262,9 @@ class MasterStackLayoutManager(WorkspaceLayoutManager):
         )
 
     def removeExtraNesting(self, workspace: Con):
+        # We need to refresh our view of the tree here because master's parent may not have even
+        # existed when we started handling this init/event, it is created as we arrange the first
+        # stack window.
         master = self.con.get_tree().find_by_id(self.windowIds[0])
         if not master:
             self.log("Something probably went wrong in arrangeWindows")
@@ -366,7 +391,7 @@ class MasterStackLayoutManager(WorkspaceLayoutManager):
                 if window.rect.width == 0:
                     # Not sure why width would ever be 0, but I've seen this. Smells a lot like a
                     # bug somewhere.
-                    self.log(f"window with width 0 popped. likely a bug.")
+                    self.log("window with width 0 popped. likely a bug.")
                     self.log(pprint.pformat(window.__dict__))
                 else:
                     self.command(
