@@ -15,9 +15,10 @@ A PARTICULAR PURPOSE. See the GNU General Public License for more details.
 You should have received a copy of the GNU General Public License along with
 layman. If not, see <https://www.gnu.org/licenses/>.
 """
+
 import pprint
 from enum import Enum
-from typing import Optional, Type, TypeVar
+from typing import TypeVar
 
 from i3ipc import Con
 
@@ -81,15 +82,15 @@ class MasterStackLayoutManager(WorkspaceLayoutManager):
     stackSide: Side
     depthLimit: int
     substackExists: bool
-    lastFocusedWindowId: Optional[int]
+    lastFocusedWindowId: int | None
     maximized: bool
     masterWidthBeforeMaximize: int
 
     E = TypeVar("E", bound=Enum)
 
     def getEnumOption(
-        self, workspaceName: str, options: LaymanConfig, enum_class: Type[E], key: str
-    ) -> Optional[E]:
+        self, workspaceName: str, options: LaymanConfig, enum_class: type[E], key: str
+    ) -> E | None:
         value = options.getForWorkspace(workspaceName, key)
         try:
             if value is not None:
@@ -288,9 +289,7 @@ class MasterStackLayoutManager(WorkspaceLayoutManager):
 
         self.removeExtraNesting(workspace)
 
-    def pushWindow(
-        self, workspace: Con, window: Con, positionAfter: Optional[Con] = None
-    ):
+    def pushWindow(self, workspace: Con, window: Con, positionAfter: Con | None = None):
         positionAtIndex: int = 0
         if positionAfter:
             positionAfterIndex = self.getWindowListIndex(positionAfter)
@@ -471,7 +470,7 @@ class MasterStackLayoutManager(WorkspaceLayoutManager):
             )
         self.stackSide = Side.opposite(self.stackSide)
 
-    def getWindowListIndex(self, window: Con) -> Optional[int]:
+    def getWindowListIndex(self, window: Con) -> int | None:
         try:
             return self.windowIds.index(window.id)
         except ValueError:

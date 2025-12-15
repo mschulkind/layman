@@ -15,8 +15,9 @@ A PARTICULAR PURPOSE. See the GNU General Public License for more details.
 You should have received a copy of the GNU General Public License along with
 layman. If not, see <https://www.gnu.org/licenses/>.
 """
+
 import inspect
-from typing import ClassVar, Optional
+from typing import ClassVar
 
 import i3ipc
 
@@ -27,15 +28,15 @@ class WorkspaceLayoutManager:
     # These properties should be overriden to configure your WLM as
     # needed.
     shortName: ClassVar[str] = "none"
-    overridesMoveBinds: ClassVar[
-        bool
-    ] = False  # Should window movement commands be sent as binds
-    overridesFocusBinds: ClassVar[
-        bool
-    ] = False  # Should focus movement commands be sent as binds
-    supportsFloating: ClassVar[
-        bool
-    ] = False  # Should windowFloating be used, or treated as Added/Removed
+    overridesMoveBinds: ClassVar[bool] = (
+        False  # Should window movement commands be sent as binds
+    )
+    overridesFocusBinds: ClassVar[bool] = (
+        False  # Should focus movement commands be sent as binds
+    )
+    supportsFloating: ClassVar[bool] = (
+        False  # Should windowFloating be used, or treated as Added/Removed
+    )
 
     con: i3ipc.Connection
     workspaceName: str
@@ -54,7 +55,7 @@ class WorkspaceLayoutManager:
     def __init__(
         self,
         con: i3ipc.Connection,
-        workspace: Optional[i3ipc.Con],
+        workspace: i3ipc.Con | None,
         workspaceName: str,
         options: LaymanConfig,
     ):
@@ -76,7 +77,7 @@ class WorkspaceLayoutManager:
     def windowRemoved(
         self,
         event: i3ipc.WindowEvent,
-        workspace: Optional[i3ipc.Con],
+        workspace: i3ipc.Con | None,
         window: i3ipc.Con,
     ):
         pass
@@ -121,19 +122,15 @@ class WorkspaceLayoutManager:
     def log(self, msg):
         if self.debug:
             print(
-                (
-                    "%s %s: %s: %s"
-                    % (self.shortName, self.workspaceName, inspect.stack()[1][3], msg)
-                )
+                "%s %s: %s: %s"
+                % (self.shortName, self.workspaceName, inspect.stack()[1][3], msg)
             )
 
     # Same as log(), but prints in non-debug as well.
     def logError(self, msg):
         print(
-            (
-                "%s %s: %s: %s"
-                % (self.shortName, self.workspaceName, inspect.stack()[1][3], msg)
-            )
+            "%s %s: %s: %s"
+            % (self.shortName, self.workspaceName, inspect.stack()[1][3], msg)
         )
 
     # This log function includes the class name, workspace number, and the
@@ -142,8 +139,6 @@ class WorkspaceLayoutManager:
     def logCaller(self, msg):
         if self.debug:
             print(
-                (
-                    "%s %s: %s: %s"
-                    % (self.shortName, self.workspaceName, inspect.stack()[2][3], msg)
-                )
+                "%s %s: %s: %s"
+                % (self.shortName, self.workspaceName, inspect.stack()[2][3], msg)
             )

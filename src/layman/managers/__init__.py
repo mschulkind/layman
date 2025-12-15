@@ -1,4 +1,4 @@
-from .autotiling import AutotilingLayoutManager
-from .grid import GridLayoutManager
-from .master_stack import MasterStackLayoutManager
-from .workspace import WorkspaceLayoutManager
+from .autotiling import AutotilingLayoutManager as AutotilingLayoutManager
+from .grid import GridLayoutManager as GridLayoutManager
+from .master_stack import MasterStackLayoutManager as MasterStackLayoutManager
+from .workspace import WorkspaceLayoutManager as WorkspaceLayoutManager

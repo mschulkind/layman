@@ -15,6 +15,7 @@ A PARTICULAR PURPOSE. See the GNU General Public License for more details.
 You should have received a copy of the GNU General Public License along with
 layman. If not, see <https://www.gnu.org/licenses/>.
 """
+
 import sys
 
 from . import layman
@@ -26,7 +27,7 @@ def main():
 
     # Write command if args were passed
     if len(sys.argv) > 1:
-        command = ' '.join(sys.argv).replace("%s " % sys.argv[0], '')
+        command = " ".join(sys.argv).replace("%s " % sys.argv[0], "")
         pipe = open(PIPE, "w")
         pipe.write(command)
         pipe.close()
@@ -36,5 +37,6 @@ def main():
     daemon = layman.Layman()
     daemon.run()
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     main()

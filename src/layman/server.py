@@ -15,6 +15,7 @@ A PARTICULAR PURPOSE. See the GNU General Public License for more details.
 You should have received a copy of the GNU General Public License along with
 layman. If not, see <https://www.gnu.org/licenses/>.
 """
+
 from os import mkfifo, unlink
 from queue import SimpleQueue
 from threading import Thread

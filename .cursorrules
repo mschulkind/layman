@@ -1,0 +1,155 @@
+# Layman Development Rules
+
+This file documents coding conventions and development practices for the layman project.
+
+## Project Overview
+
+Layman is a layout management daemon for sway/i3 window managers, written in Python.
+
+## Package Management
+
+- **Use uv** for all package management
+- Run commands with `uv run <command>`
+- Add dependencies with `uv add <package>`
+- Add dev dependencies with `uv add --dev <package>`
+- Lock with `uv lock`
+- Sync environment with `uv sync`
+
+## Code Style
+
+### Python
+
+- **Formatter:** ruff format
+- **Linter:** ruff check
+- **Type Checker:** ty (optional, for strict checking)
+- **Line length:** 88 characters
+- **Python version:** 3.10+
+
+### Naming Conventions
+
+- Classes: `PascalCase` (e.g., `WorkspaceLayoutManager`)
+- Functions/methods: `camelCase` (project convention, not PEP8)
+- Variables: `camelCase` (project convention)
+- Constants: `UPPER_SNAKE_CASE`
+- Files: `snake_case.py`
+
+### Type Hints
+
+- Add type hints to new code
+- Use `Optional[T]` for nullable types
+- Use `ClassVar` for class variables
+- Import from `typing` for Python 3.10 compatibility
+
+## Project Structure
+
+```
+src/layman/
+├── __init__.py
+├── __main__.py      # Entry point
+├── layman.py        # Main daemon class
+├── config.py        # Configuration
+├── listener.py      # Event listener thread
+├── server.py        # Pipe command server
+├── utils.py         # Utilities
+└── managers/        # Layout managers
+    ├── __init__.py
+    ├── workspace.py      # Base class
+    ├── autotiling.py
+    ├── master_stack.py
+    └── grid.py
+```
+
+## Development Commands
+
+```bash
+# Run layman
+just run
+
+# Lint everything
+just lint
+
+# Format code
+just format
+
+# Type check
+just typecheck
+
+# Run tests
+just test
+```
+
+## Documentation
+
+- All docs in `docs/` directory
+- Each subdirectory has a `README.md` index
+- Use Mermaid for diagrams
+- Lint markdown with markdownlint
+
+## Layout Manager Development
+
+### Creating a New Layout
+
+1. Create file in `src/layman/managers/`
+2. Inherit from `WorkspaceLayoutManager`
+3. Set unique `shortName`
+4. Override event hooks as needed
+5. Add to `managers/__init__.py`
+6. Document in `docs/layouts/`
+
+### Required Overrides
+
+```python
+class MyLayoutManager(WorkspaceLayoutManager):
+    shortName = "MyLayout"  # Required
+    overridesMoveBinds = False  # Set True to handle move commands
+    overridesFocusBinds = False  # Set True to handle focus commands
+    supportsFloating = False  # Set True for custom floating handling
+```
+
+## Testing
+
+- Manual testing in sway is primary method
+- Enable `debug = true` in config for logging
+- Unit tests use pytest (future)
+
+## Git Workflow
+
+- Use feature branches
+- Conventional commit messages:
+  - `feat:` new features
+  - `fix:` bug fixes
+  - `docs:` documentation
+  - `refactor:` code refactoring
+  - `style:` formatting
+  - `test:` tests
+- Run `just lint` before committing
+
+## Common Patterns
+
+### Executing Sway Commands
+
+```python
+self.command(f"[con_id={window_id}] resize set width 50 ppt")
+```
+
+### Moving Windows
+
+```python
+def moveWindowCommand(self, moveId: int, targetId: int):
+    self.command(f"[con_id={targetId}] mark --add move_target")
+    self.command(f"[con_id={moveId}] move window to mark move_target")
+    self.command(f"[con_id={targetId}] unmark move_target")
+```
+
+### Swapping Windows
+
+```python
+self.command(f"[con_id={id1}] swap container with con_id {id2}")
+```
+
+## Debugging
+
+- Set `debug = true` in config.toml
+- Use `self.log()` for debug messages
+- Use `self.logError()` for errors (always shown)
+- Check output: `layman 2>&1 | grep <pattern>`

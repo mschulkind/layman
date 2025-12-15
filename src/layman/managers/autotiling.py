@@ -16,6 +16,7 @@ A PARTICULAR PURPOSE. See the GNU General Public License for more details.
 You should have received a copy of the GNU General Public License along with
 layman. If not, see <https://www.gnu.org/licenses/>.
 """
+
 from layman.managers.workspace import WorkspaceLayoutManager
 
 KEY_DEPTH_LIMIT = "depthLimit"
@@ -82,7 +83,7 @@ class AutotilingLayoutManager(WorkspaceLayoutManager):
             if result[0].success:
                 self.log("Switched to %s" % newLayout)
             elif self.debug:
-                self.log("Error: Switch failed with err {}".format(result[0].error))
+                self.log(f"Error: Switch failed with err {result[0].error}")
 
     def windowAdded(self, event, workspace, window):
         self.switchSplit(window)

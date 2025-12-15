@@ -18,7 +18,6 @@ layman. If not, see <https://www.gnu.org/licenses/>.
 
 import os
 from optparse import OptionParser
-from typing import Optional
 
 from i3ipc import Con, Connection
 
@@ -29,11 +28,11 @@ def getCommaSeparatedArgs(option, opt, value, parser):
     setattr(parser.values, option.dest, value.split(","))
 
 
-def findFocusedWindow(con: Connection) -> Optional[Con]:
+def findFocusedWindow(con: Connection) -> Con | None:
     return con.get_tree().find_focused()
 
 
-def findFocusedWorkspace(con: Connection) -> Optional[Con]:
+def findFocusedWorkspace(con: Connection) -> Con | None:
     window = findFocusedWindow(con)
     return None if window is None else window.workspace()
 
