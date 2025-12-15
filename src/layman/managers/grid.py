@@ -16,6 +16,7 @@ A PARTICULAR PURPOSE. See the GNU General Public License for more details.
 You should have received a copy of the GNU General Public License along with
 layman. If not, see <https://www.gnu.org/licenses/>.
 """
+
 from layman.managers.workspace import WorkspaceLayoutManager
 
 
@@ -52,7 +53,7 @@ class GridLayoutManager(WorkspaceLayoutManager):
         if result[0].success:
             self.log("Switched to %s" % newLayout)
         elif self.debug:
-            self.log("Error: Switch failed with err {}".format(result[0].error))
+            self.log(f"Error: Switch failed with err {result[0].error}")
 
     def moveWindow(self, moveId, targetId):
         self.con.command("[con_id=%d] mark --add move_target" % targetId)

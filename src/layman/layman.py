@@ -16,6 +16,7 @@ A PARTICULAR PURPOSE. See the GNU General Public License for more details.
 You should have received a copy of the GNU General Public License along with
 layman. If not, see <https://www.gnu.org/licenses/>.
 """
+
 import inspect
 import itertools
 import logging
@@ -28,7 +29,7 @@ from dataclasses import dataclass, field
 from datetime import datetime
 from importlib.machinery import SourceFileLoader
 from queue import SimpleQueue
-from typing import Any, Optional, Type, cast
+from typing import Any, cast
 
 from i3ipc import BindingEvent, Con, Connection, WindowEvent, WorkspaceEvent
 from setproctitle import setproctitle
@@ -46,7 +47,7 @@ from layman.server import MessageServer
 
 @dataclass
 class WorkspaceState:
-    layoutManager: Optional[WorkspaceLayoutManager] = None
+    layoutManager: WorkspaceLayoutManager | None = None
     layoutName: str = "none"
     # The set of all window IDs on the workspace, including floating windows.
     windowIds: set[int] = field(default_factory=set)
@@ -55,7 +56,7 @@ class WorkspaceState:
 
 @contextmanager
 def layoutManagerReloader(
-    layman: "Layman", workspace: Optional[Con], workspaceName: Optional[str] = None
+    layman: "Layman", workspace: Con | None, workspaceName: str | None = None
 ):
     if not workspaceName:
         assert workspace
@@ -73,8 +74,8 @@ def layoutManagerReloader(
 
 
 class Layman:
-    builtinLayouts: dict[str, Type[WorkspaceLayoutManager]]
-    userLayouts: dict[str, Type[WorkspaceLayoutManager]]
+    builtinLayouts: dict[str, type[WorkspaceLayoutManager]]
+    userLayouts: dict[str, type[WorkspaceLayoutManager]]
     workspaceStates: dict[str, WorkspaceState]
 
     def __init__(self):
@@ -107,8 +108,8 @@ class Layman:
         self,
         event: WindowEvent,
         tree: Con,
-        workspace: Optional[Con],
-        window: Optional[Con],
+        workspace: Con | None,
+        window: Con | None,
     ):
         if not (workspace and window):
             # Hopefully this was just a window that showed up and disappeared extremely quickly.
@@ -126,8 +127,8 @@ class Layman:
         self,
         event: WindowEvent,
         tree: Con,
-        workspace: Optional[Con],
-        window: Optional[Con],
+        workspace: Con | None,
+        window: Con | None,
     ):
         if not workspace:
             self.log("no workspace found")
@@ -167,8 +168,8 @@ class Layman:
         self,
         event: WindowEvent,
         tree: Con,
-        workspace: Optional[Con],
-        window: Optional[Con],
+        workspace: Con | None,
+        window: Con | None,
     ):
         state = None
         workspaceName = None
@@ -207,8 +208,8 @@ class Layman:
         self,
         event: WindowEvent,
         tree: Con,
-        to_workspace: Optional[Con],
-        window: Optional[Con],
+        to_workspace: Con | None,
+        window: Con | None,
     ):
         if not to_workspace:
             # If we didn't find a workspace, hopefully the window was just closed very quickly after
@@ -250,8 +251,8 @@ class Layman:
         self,
         event: WindowEvent,
         tree: Con,
-        workspace: Optional[Con],
-        window: Optional[Con],
+        workspace: Con | None,
+        window: Con | None,
     ):
         # If we can't find a window, hopefully it was just closed very quickly after the floating
         # event. Ignoring.
@@ -398,7 +399,7 @@ class Layman:
                         className, layoutPath + "/" + file
                     ).load_module()
                     self.userLayouts[module.shortName] = cast(
-                        Type[WorkspaceLayoutManager], module
+                        type[WorkspaceLayoutManager], module
                     )
                     self.log("Loaded user layout %s" % module.shortName)
                 except ImportError:
@@ -456,9 +457,9 @@ class Layman:
 
     def setWorkspaceLayout(
         self,
-        workspace: Optional[Con],
+        workspace: Con | None,
         workspaceName: str,
-        layoutName: Optional[str] = None,
+        layoutName: str | None = None,
     ):
         state = self.workspaceStates[workspaceName]
 
@@ -516,9 +517,9 @@ class Layman:
     def handleWindowRemoved(
         self,
         event: WindowEvent,
-        workspace: Optional[Con],
-        workspaceName: Optional[str],
-        window: Optional[Con],
+        workspace: Con | None,
+        workspaceName: str | None,
+        window: Con | None,
     ):
         assert workspace or workspaceName
         if not workspaceName:
@@ -641,9 +642,7 @@ class Layman:
                     workspace = window and window.workspace()
                     handlers: dict[
                         str,
-                        Callable[
-                            [WindowEvent, Con, Optional[Con], Optional[Con]], None
-                        ],
+                        Callable[[WindowEvent, Con, Con | None, Con | None], None],
                     ] = {
                         "new": self.windowCreated,
                         "close": self.windowClosed,

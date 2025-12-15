@@ -1,0 +1,14 @@
+{
+  "name": "layman-docs",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Documentation tooling for layman",
+  "scripts": {
+    "lint:md": "markdownlint-cli2 'docs/**/*.md' '*.md'",
+    "lint:md:fix": "markdownlint-cli2 --fix 'docs/**/*.md' '*.md'"
+  },
+  "devDependencies": {
+    "markdownlint-cli2": "^0.17.0"
+  },
+  "packageManager": "pnpm@9.15.0"
+}

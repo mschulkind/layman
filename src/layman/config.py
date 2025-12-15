@@ -15,10 +15,9 @@ A PARTICULAR PURPOSE. See the GNU General Public License for more details.
 You should have received a copy of the GNU General Public License along with
 layman. If not, see <https://www.gnu.org/licenses/>.
 """
-from logging import exception
-from typing import Optional, Union
 
-import i3ipc
+from logging import exception
+
 import tomli
 
 CONFIG_PATH = ".config/layman/config.toml"
@@ -33,7 +32,7 @@ KEY_LAYOUT = "defaultLayout"
 
 
 class LaymanConfig:
-    def __init__(self, configPath: Optional[str]):
+    def __init__(self, configPath: str | None):
         self.configDict = self.parse(configPath or CONFIG_PATH)
 
     def parse(self, configPath: str):
@@ -50,9 +49,7 @@ class LaymanConfig:
         except KeyError:
             return None
 
-    def getForWorkspace(
-        self, workspaceName: str, key: str
-    ) -> Union[str, int, float, None]:
+    def getForWorkspace(self, workspaceName: str, key: str) -> str | int | float | None:
         # Try to get value for the workspace
         try:
             return self.configDict[TABLE_WORKSPACE][workspaceName][key]
