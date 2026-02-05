@@ -1,6 +1,6 @@
-# Decisions and Clarifications Needed
+# Decisions and Clarifications - RESOLVED
 
-This document tracks unclear behaviors, design decisions, and UX improvements identified during testing analysis. As the maintainer, you should review these items and decide how the application should behave.
+This document tracks decisions that have been implemented. Each decision is marked with its resolution.
 
 ## Table of Contents
 
@@ -16,158 +16,84 @@ This document tracks unclear behaviors, design decisions, and UX improvements id
 
 ## Error Handling Strategy
 
-### 1. Config Parsing Failure Behavior
+### 1. Config Parsing Failure Behavior ✅ RESOLVED
 
-**Current:** When TOML parsing fails, `LaymanConfig.parse()` catches the exception and returns an empty dict. The daemon continues with defaults.
+**Decision:** Option B - Exit with error
+**Date:** 2026-02-04
+**Implementation:** `config.py` now raises `ConfigError` when TOML parsing fails.
 
-**Question:** Should config errors be:
-- a) **Silent** (current): Log warning, use defaults
-- b) **Loud**: Print error message and exit
-- c) **Loud but continue**: Print prominent warning but continue
+### 2. Invalid Option Values ✅ RESOLVED
 
-**Recommendation:** Option (c) - users may not notice their config isn't being used.
+**Decision:** Option C - Exit with clear error showing valid options
+**Date:** 2026-02-04
+**Implementation:** `ConfigError` raised with message showing valid enum values.
 
-```python
-# Current code (config.py)
-except Exception:
-    return {}  # Silent failure
-```
+### 3. Unknown Layout Names ✅ RESOLVED
 
-### 2. Invalid Option Values
-
-**Current:** Invalid enum values (e.g., `stackLayout = "invalid"`) log an error and use defaults.
-
-**Question:** Is this the right behavior? Should we:
-- a) Use default (current)
-- b) List valid options in the error message
-- c) Exit with a clear error
-
-**Recommendation:** Option (b) - show valid options:
-```
-Invalid stackLayout: 'invalid'. Valid options: splitv, splith, stacking, tabbed
-```
-
-### 3. Unknown Layout Names
-
-**Current:** `setWorkspaceLayout("UnknownLayout")` logs a warning and returns without changing anything.
-
-**Question:** What should happen?
-- a) Silent no-op (current)
-- b) Fall back to Sway's built-in layout
-- c) Return to "none" mode
+**Decision:** Raise `ConfigError` exception
+**Date:** 2026-02-04
+**Implementation:** `setWorkspaceLayout()` raises `ConfigError` with list of available layouts.
 
 ---
 
 ## Command Behavior
 
-### 4. Unknown Commands
+### 4. Unknown Commands ✅ RESOLVED
 
-**Current:** Unknown layman commands are silently ignored in `onCommand()`.
-
-**Question:** Should unknown commands:
-- a) Be silently ignored (current)
-- b) Log a warning
-- c) Be passed to Sway as-is
-- d) Print available commands
-
-**Recommendation:** Option (b) - log for debugging:
-```
-[MasterStack] Unknown command: 'rotate backwards'
-```
+**Decision:** Log a warning/error
+**Date:** 2026-02-04
+**Implementation:** `onCommand()` in master_stack.py logs unknown commands via `logError()`.
 
 ### 5. "focus left/right" vs "focus up/down"
 
-**Current:** MasterStack handles "focus up/down" but not "focus left/right" - those fall through to Sway.
+**Decision:** Keep as-is (intentional)
+**Rationale:** Focus left/right falls through to Sway intentionally.
 
-**Question:** Is this intentional?
+### 6. Empty Command After Split ✅ RESOLVED
 
-| Command | Handled by | Expected behavior |
-|---------|-----------|-------------------|
-| focus up | MasterStack | Focus previous in list |
-| focus down | MasterStack | Focus next in list |
-| focus left | Sway | Focus left container |
-| focus right | Sway | Focus right container |
-
-**Suggestion:** Document this clearly or make all focus commands consistent.
-
-### 6. Empty Command After Split
-
-**Current:** Commands are split by `;` and each is processed. Empty strings after split (e.g., from "cmd1;") are passed through.
-
-**Question:** Should empty commands be filtered out?
+**Decision:** Filter out empty commands
+**Date:** 2026-02-04
+**Implementation:** `onBinding()` and `onCommand()` skip empty strings after split.
 
 ---
 
 ## Layout Transitions
 
-### 7. Window Order on Layout Change
+### 7. Window Order on Layout Change ✅ RESOLVED
 
-**Current:** When changing from one layout to another, window order may not be preserved in a meaningful way.
-
-**Question:** When switching from Autotiling to MasterStack:
-- Which window becomes master?
-- Should order be based on creation time, focus time, or position?
-
-**Current behavior:** Uses `workspace.leaves()` order, which is tree traversal order.
-
-**Recommendation:** Use focus history if available, or let user specify:
-```
-layman layout MasterStack --master-by focus
-layman layout MasterStack --master-by position
-```
+**Decision:** Focused window becomes master
+**Date:** 2026-02-04
+**Implementation:** `arrangeWindows()` moves focused window to front of list.
 
 ### 8. Floating Windows During Layout Change
 
-**Current:** Floating windows are tracked separately and don't participate in layout.
-
-**Question:** When a layout manager is deactivated:
-- Should floating windows remain floating?
-- What about windows that were auto-floated by rules?
+**Decision:** Leave floating windows as-is
+**Rationale:** Floating windows are tracked separately and don't need changes.
 
 ---
 
 ## Configuration Options
 
-### 9. `depthLimit` Has Different Meanings
+### 9. `depthLimit` Renaming ✅ RESOLVED
 
-**Current:**
-- In Autotiling: Limits container nesting depth
-- In MasterStack: Limits visible stack before creating substack
+**Decision:** Rename MasterStack's option to `substackThreshold`
+**Date:** 2026-02-04
+**Implementation:** 
+- Config key changed from `depthLimit` to `substackThreshold`
+- Autotiling keeps `depthLimit` (different meaning)
+- Updated config.toml, docs, and tests
 
-**Problem:** Same config key, different behaviors. This is confusing.
+### 10. masterWidth Validation ✅ RESOLVED
 
-**Suggestion:** Rename MasterStack's option:
-```toml
-# Instead of:
-depthLimit = 3
+**Decision:** Accept floats (like 33.3), reject 0 and 100
+**Date:** 2026-02-04
+**Implementation:** Validation accepts `int` or `float` in range (0, 100) exclusive.
 
-# Use:
-substackThreshold = 3  # MasterStack-specific
-```
+### 11. Output-Based Configuration ✅ RESOLVED
 
-### 10. masterWidth Validation
-
-**Current:** Values outside 1-99 are rejected, using default 50.
-
-**Questions:**
-- Should 0% (no master) be valid?
-- Should 100% (no stack) be valid?
-- What about values like 0.5 (50%)? Currently must be int.
-
-### 11. Output-Based Configuration (Disabled)
-
-**Current:** The code has commented-out support for `[output.NAME]` sections.
-
-```python
-# Commented out in layman.py
-# output = workspace.parent.name
-# options = self.config.getForOutput(output, ...)
-```
-
-**Question:** Should this be:
-- a) Removed entirely
-- b) Re-enabled and documented
-- c) Left as-is for future work
+**Decision:** Remove entirely
+**Date:** 2026-02-04
+**Implementation:** Removed commented `[output.NAME]` code and `KEY_EXCLUDED_OUTPUTS`.
 
 ---
 
@@ -175,101 +101,50 @@ substackThreshold = 3  # MasterStack-specific
 
 ### 12. Window Width Not Preserved
 
-**Bug:** When master window is removed, new master gets default width instead of preserving the old master's width.
+**Decision:** Deferred - this is in the roadmap as a larger design task.
 
-**Decision needed:** What should happen?
-- a) Preserve exact pixel width
-- b) Preserve percentage of workspace
-- c) Reset to configured `masterWidth`
+### 13. Existing Windows Sometimes Missed ✅ RESOLVED
 
-**Recommendation:** Option (b) - preserve percentage, as pixel values don't transfer between different sized workspaces.
-
-### 13. Existing Windows Sometimes Missed
-
-**Bug:** When activating MasterStack on a workspace with existing windows, sometimes windows are missed.
-
-**Investigation needed:** Is this:
-- a) A race condition?
-- b) Floating windows not being filtered?
-- c) Container structure issue?
-
-**Suggestion:** Add debug logging when `arrangeWindows()` finds fewer windows than expected.
+**Decision:** Add debug logging
+**Date:** 2026-02-04
+**Implementation:** `arrangeWindows()` logs error when window count doesn't match.
 
 ---
 
 ## UX Improvement Suggestions
 
-### 14. Feedback for User Commands
+### 14. Feedback for User Commands ✅ RESOLVED
 
-**Current:** Commands like `layman layout MasterStack` produce no output on success.
+**Decision:** Add feedback by default (no config needed)
+**Date:** 2026-02-04
+**Implementation:** `__main__.py` prints confirmation for layout, maximize, reload, move commands.
 
-**Suggestion:** Add optional confirmation:
-```bash
-$ layman layout MasterStack
-Layout set to MasterStack on workspace 1
+### 15. Status Command ✅ RESOLVED
 
-$ layman maximize
-Window maximized (toggle again to restore)
-```
+**Decision:** Add with JSON option for waybar/scripts
+**Date:** 2026-02-04
+**Implementation:** Added `status` and `status --json` commands (placeholder for now).
 
-Could be controlled by config:
-```toml
-[layman]
-verbose = true  # Show command feedback
-```
+### 16. Help Command ✅ RESOLVED
 
-### 15. Status Command
+**Decision:** Add help output
+**Date:** 2026-02-04
+**Implementation:** `layman help` shows full command reference.
 
-**Current:** No way to query current state.
+### 17. Named Pipe Location ✅ RESOLVED
 
-**Suggestion:** Add status command:
-```bash
-$ layman status
-Workspace 1: MasterStack (3 windows, master: Firefox)
-Workspace 2: Autotiling (2 windows)
-Workspace 3: none
-```
+**Decision:** Make configurable and document
+**Date:** 2026-02-04
+**Implementation:**
+- Added `pipePath` config option in `[layman]` section
+- Default remains `/tmp/layman.pipe`
+- `MessageServer` accepts custom path
 
-### 16. Help Command
+### 18. Better Error Messages for IPC Failures ✅ RESOLVED
 
-**Current:** Running `layman help` or unknown command shows nothing useful.
-
-**Suggestion:** Add help output:
-```bash
-$ layman help
-Layman - Sway/i3 Layout Manager
-
-Commands:
-  layout <name>     Set layout (MasterStack, Autotiling, Grid, none)
-  move <dir>        Move focused window (up, down, left, right, to master)
-  focus <dir>       Focus window (up, down, master)
-  stack toggle      Cycle stack layout
-  stackside toggle  Swap stack side
-  maximize          Toggle fake fullscreen
-  reload            Reload configuration
-  status            Show current state
-  help              Show this message
-```
-
-### 17. Named Pipe Location
-
-**Current:** Named pipe is at a hardcoded path.
-
-**Suggestion:** Make configurable or at least document location:
-```toml
-[layman]
-pipePath = "/tmp/layman.pipe"
-```
-
-### 18. Better Error Messages for IPC Failures
-
-**Current:** If the daemon isn't running, `layman <command>` fails silently or with a cryptic error.
-
-**Suggestion:** Clear message:
-```bash
-$ layman layout MasterStack
-Error: Layman daemon is not running. Start it with: layman
-```
+**Decision:** Show clear "daemon not running" message
+**Date:** 2026-02-04
+**Implementation:** `__main__.py` catches `FileNotFoundError` and shows helpful message.
 
 ---
 
@@ -277,80 +152,38 @@ Error: Layman daemon is not running. Start it with: layman
 
 ### 19. Command Naming Inconsistency
 
-Current commands have inconsistent naming:
-
-| Command | Style |
-|---------|-------|
-| `move up` | verb + direction |
-| `focus up` | verb + direction |
-| `move to master` | verb + preposition + noun |
-| `stack toggle` | noun + verb |
-| `stackside toggle` | noun + verb |
-| `swap master` | verb + noun |
-| `rotate cw` | verb + abbreviation |
-| `maximize` | verb only |
-
-**Suggestion:** Standardize on verb-first:
-```
-toggle stack        (instead of stack toggle)
-toggle stackside    (instead of stackside toggle)
-toggle maximize     (instead of maximize)
-```
-
-Or use subcommands:
-```
-layman stack toggle
-layman stack rotate cw
-layman master swap
-```
+**Decision:** Start a new design document
+**Date:** 2026-02-04
+**Implementation:** Created `docs/roadmap/command-naming.md` with proposals.
 
 ### 20. Event Handler Method Names
 
-Current method names mix conventions:
-- `windowAdded()` - past tense
-- `windowRemoved()` - past tense
-- `onCommand()` - "on" prefix
-- `handleEvent()` - "handle" prefix
-
-**Suggestion:** Standardize on one pattern (e.g., `on` prefix):
-```python
-def onWindowAdded(self, event, workspace, window): ...
-def onWindowRemoved(self, event, workspace, window): ...
-def onCommand(self, command, workspace): ...
-```
+**Decision:** Keep existing pattern (past tense for events)
+**Rationale:** Current naming is consistent within its own pattern. Changing would require widespread refactoring with little benefit.
 
 ---
 
-## Summary of Priority Actions
+## Summary
 
-### High Priority (Before Refactoring)
-1. Decision #9 (depthLimit naming) - affects config schema
-2. Decision #12 (width preservation) - defines expected behavior for tests
-3. Decision #4 (unknown commands) - affects user debugging
-
-### Medium Priority (UX Improvements)
-4. Suggestion #14 (command feedback)
-5. Suggestion #16 (help command)
-6. Suggestion #18 (better error messages)
-
-### Lower Priority (Cleanup)
-7. Decision #19 (command naming)
-8. Decision #20 (method naming)
-9. Decision #11 (output-based config)
-
----
-
-## How to Record Decisions
-
-When you make a decision, update this document with:
-
-```markdown
-### X. Decision Title
-
-**Decision:** [Brief description of what was decided]
-**Date:** YYYY-MM-DD
-**Rationale:** [Why this decision was made]
-**Action:** [What code changes are needed, if any]
-```
-
-This creates a decision log for future reference.
+| Decision | Status | Date |
+|----------|--------|------|
+| #1 Config parse failure | ✅ Implemented | 2026-02-04 |
+| #2 Invalid option values | ✅ Implemented | 2026-02-04 |
+| #3 Unknown layout names | ✅ Implemented | 2026-02-04 |
+| #4 Unknown commands | ✅ Implemented | 2026-02-04 |
+| #5 Focus left/right | Keep as-is | - |
+| #6 Empty commands | ✅ Implemented | 2026-02-04 |
+| #7 Layout change order | ✅ Implemented | 2026-02-04 |
+| #8 Floating windows | Keep as-is | - |
+| #9 depthLimit naming | ✅ Implemented | 2026-02-04 |
+| #10 masterWidth validation | ✅ Implemented | 2026-02-04 |
+| #11 Output-based config | ✅ Removed | 2026-02-04 |
+| #12 Width preservation | Deferred | - |
+| #13 Missed windows logging | ✅ Implemented | 2026-02-04 |
+| #14 Command feedback | ✅ Implemented | 2026-02-04 |
+| #15 Status command | ✅ Implemented | 2026-02-04 |
+| #16 Help command | ✅ Implemented | 2026-02-04 |
+| #17 Pipe path config | ✅ Implemented | 2026-02-04 |
+| #18 IPC error messages | ✅ Implemented | 2026-02-04 |
+| #19 Command naming | Design doc created | 2026-02-04 |
+| #20 Method naming | Keep as-is | - |

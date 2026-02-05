@@ -23,7 +23,7 @@ from layman.config import (
 KEY_MASTER_WIDTH = "masterWidth"
 KEY_STACK_LAYOUT = "stackLayout"
 KEY_STACK_SIDE = "stackSide"
-KEY_DEPTH_LIMIT = "depthLimit"
+KEY_SUBSTACK_THRESHOLD = "depthLimit"
 
 
 class TestLaymanConfigParse:
@@ -41,10 +41,11 @@ class TestLaymanConfigParse:
         assert isinstance(config.configDict, dict)
         assert TABLE_LAYMAN in config.configDict
 
-    def test_parse_invalidToml_returnsEmptyDict(self, configs_path):
-        """Invalid TOML should return empty dict (graceful failure)."""
-        config = LaymanConfig(str(configs_path / "invalid_config.toml"))
-        assert config.configDict == {}
+    def test_parse_invalidToml_raisesConfigError(self, configs_path):
+        """Invalid TOML should raise ConfigError (Decision #1)."""
+        from layman.config import ConfigError
+        with pytest.raises(ConfigError, match="Failed to parse config file"):
+            LaymanConfig(str(configs_path / "invalid_config.toml"))
 
     def test_parse_missingFile_raisesError(self, tmp_path):
         """Missing file should raise FileNotFoundError."""
@@ -133,10 +134,10 @@ class TestLaymanConfigGetForWorkspace:
 
     def test_getForWorkspace_depthLimit_perWorkspace(self, valid_config):
         """depthLimit should be workspace-specific."""
-        assert valid_config.getForWorkspace("1", KEY_DEPTH_LIMIT) == 3
-        assert valid_config.getForWorkspace("2", KEY_DEPTH_LIMIT) == 4
+        assert valid_config.getForWorkspace("1", KEY_SUBSTACK_THRESHOLD) == 3
+        assert valid_config.getForWorkspace("2", KEY_SUBSTACK_THRESHOLD) == 4
         # Workspace 3 and default have 0
-        assert valid_config.getForWorkspace("3", KEY_DEPTH_LIMIT) == 0
+        assert valid_config.getForWorkspace("3", KEY_SUBSTACK_THRESHOLD) == 0
 
 
 class TestLaymanConfigEdgeCases:

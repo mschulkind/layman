@@ -4,21 +4,31 @@
 # The `layman` section configures options that apply to the layman daemon, and any fallback
 # values for options not set in a [workspace] section.
 [layman]
-defaultLayout = "none"	# The default WLM to assign to a workspace
-excludedWorkspaces = []	# Numbers of workspaces to be excluded
-excludedOutputs = []	# Names of outputs to be excuded
-debug = false			# Enable logging debug messages globaly
-depthLimit = 0			# Autotiling: Default depth limit (disabled) for all workspaces
-stackLayout = "splitv"	# MasterStack: Default stack layout for all workspaces
-stackSide = "right"	# MasterStack: Default stack position for all workspaces
-masterWidth = 50		# MasterStack: Default master width for all workspaces
+defaultLayout = "none"        # The default WLM to assign to a workspace
+excludedWorkspaces = []       # Numbers of workspaces to be excluded
+debug = false                 # Enable logging debug messages globally
+pipePath = "/tmp/layman.pipe" # Path to the named pipe for IPC commands
+
+# Autotiling options
+depthLimit = 0                # Autotiling: Default depth limit (disabled) for all workspaces
+
+# MasterStack options
+stackLayout = "splitv"        # MasterStack: Default stack layout (splitv, splith, stacking, tabbed)
+stackSide = "right"           # MasterStack: Default stack position (left, right)
+masterWidth = 50              # MasterStack: Default master width (1-99, can be float like 33.3)
+substackThreshold = 0         # MasterStack: Windows before creating substack (0 = disabled)
 
 
 # `workspace` sections configure options for the specified workspace.
 [workspace.1]
-defaultLayout = "none"	# The default WLM to assign to this workspace
-debug = false			# Enable debug messages for this workspace
-depthLimit = 0 			# Autotiling: Depth limit (disabled) for this workspace
-stackLayout = "splitv"	# MasterStack: Stack layout for this workspace
-stackSide = "right"		# MasterStack: Stack position for this workspace
-masterWidth = 50		# MasterStack: Master width for this workspaces on this output
+defaultLayout = "none"        # The default WLM to assign to this workspace
+debug = false                 # Enable debug messages for this workspace
+
+# Autotiling options (per-workspace)
+depthLimit = 0                # Autotiling: Depth limit for this workspace
+
+# MasterStack options (per-workspace)
+stackLayout = "splitv"        # MasterStack: Stack layout for this workspace
+stackSide = "right"           # MasterStack: Stack position for this workspace
+masterWidth = 50              # MasterStack: Master width for this workspace (1-99)
+substackThreshold = 0         # MasterStack: Substack threshold for this workspace

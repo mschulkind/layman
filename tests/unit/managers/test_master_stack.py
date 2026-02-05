@@ -21,7 +21,7 @@ from layman.managers.master_stack import (
     KEY_MASTER_WIDTH,
     KEY_STACK_LAYOUT,
     KEY_STACK_SIDE,
-    KEY_DEPTH_LIMIT,
+    KEY_SUBSTACK_THRESHOLD,
 )
 from tests.mocks.i3ipc_mocks import (
     MockConnection,
@@ -120,7 +120,7 @@ class TestMasterStackInit:
         assert basic_manager.masterWidth == 50
         assert basic_manager.stackSide == Side.RIGHT
         assert basic_manager.stackLayout == StackLayout.SPLITV
-        assert basic_manager.depthLimit == 0
+        assert basic_manager.substackThreshold == 0
         assert basic_manager.substackExists is False
         assert basic_manager.lastFocusedWindowId is None
         assert basic_manager.maximized is False
@@ -133,7 +133,7 @@ class TestMasterStackInit:
 masterWidth = 60
 stackLayout = "tabbed"
 stackSide = "left"
-depthLimit = 3
+substackThreshold = 3
 """
         )
         manager = manager_factory(config)
@@ -141,39 +141,35 @@ depthLimit = 3
         assert manager.masterWidth == 60
         assert manager.stackLayout == StackLayout.TABBED
         assert manager.stackSide == Side.LEFT
-        assert manager.depthLimit == 3
+        assert manager.substackThreshold == 3
 
-    def test_init_invalidMasterWidth_usesDefault(
-        self, manager_factory, temp_config, capsys
+    def test_init_invalidMasterWidth_raisesConfigError(
+        self, manager_factory, temp_config
     ):
-        """Invalid masterWidth should use default and log error."""
+        """Invalid masterWidth should raise ConfigError (Decision #2)."""
+        from layman.config import ConfigError
         config = temp_config(
             """
 [layman]
 masterWidth = 150
 """
         )
-        manager = manager_factory(config)
+        with pytest.raises(ConfigError, match="Invalid masterWidth"):
+            manager_factory(config)
 
-        assert manager.masterWidth == 50  # Default
-        captured = capsys.readouterr()
-        assert "Invalid masterWidth" in captured.out
-
-    def test_init_invalidStackLayout_usesDefault(
-        self, manager_factory, temp_config, capsys
+    def test_init_invalidStackLayout_raisesConfigError(
+        self, manager_factory, temp_config
     ):
-        """Invalid stackLayout should use default and log error."""
+        """Invalid stackLayout should raise ConfigError (Decision #2)."""
+        from layman.config import ConfigError
         config = temp_config(
             """
 [layman]
 stackLayout = "invalid"
 """
         )
-        manager = manager_factory(config)
-
-        assert manager.stackLayout == StackLayout.SPLITV  # Default
-        captured = capsys.readouterr()
-        assert "Invalid stackLayout" in captured.out
+        with pytest.raises(ConfigError, match="Invalid stackLayout"):
+            manager_factory(config)
 
     def test_init_withExistingWindows_arranges(
         self, mock_connection, minimal_config
