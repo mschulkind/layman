@@ -20,23 +20,27 @@ from os import mkfifo, unlink
 from queue import SimpleQueue
 from threading import Thread
 
-PIPE = "/tmp/layman.pipe"
+DEFAULT_PIPE_PATH = "/tmp/layman.pipe"
 
 
 class MessageServer:
-    def __init__(self, queue: SimpleQueue):
+    def __init__(self, queue: SimpleQueue, pipe_path: str | None = None):
         self.queue = queue
+        self.pipe_path = pipe_path or DEFAULT_PIPE_PATH
 
         try:
-            unlink(PIPE)
+            unlink(self.pipe_path)
         except FileNotFoundError:
             pass
 
-        mkfifo(PIPE)
+        mkfifo(self.pipe_path)
         thread = Thread(target=self.readPipe, daemon=True)
         thread.start()
 
     def readPipe(self):
         while True:
-            with open(PIPE) as fifo:
-                self.queue.put({"type": "command", "command": fifo.read()})
+            with open(self.pipe_path) as fifo:
+                command = fifo.read().strip()
+                # Decision #6: Filter empty commands
+                if command:
+                    self.queue.put({"type": "command", "command": command})

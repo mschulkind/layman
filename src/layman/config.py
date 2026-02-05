@@ -16,19 +16,21 @@ You should have received a copy of the GNU General Public License along with
 layman. If not, see <https://www.gnu.org/licenses/>.
 """
 
-from logging import exception
-
 import tomli
 
 CONFIG_PATH = ".config/layman/config.toml"
 
 TABLE_LAYMAN = "layman"
 TABLE_WORKSPACE = "workspace"
-TABLE_OUTPUT = "output"
 KEY_DEBUG = "debug"
 KEY_EXCLUDED_WORKSPACES = "excludeWorkspaces"
-KEY_EXCLUDED_OUTPUTS = "excludeOutputs"
 KEY_LAYOUT = "defaultLayout"
+KEY_PIPE_PATH = "pipePath"
+
+
+class ConfigError(Exception):
+    """Raised when configuration is invalid."""
+    pass
 
 
 class LaymanConfig:
@@ -40,8 +42,9 @@ class LaymanConfig:
             try:
                 return tomli.load(f)
             except Exception as e:
-                exception(e)
-                return {}
+                raise ConfigError(
+                    f"Failed to parse config file '{configPath}': {e}"
+                ) from e
 
     def getDefault(self, key):
         try:
@@ -56,16 +59,7 @@ class LaymanConfig:
         except KeyError:
             pass
 
-        # TODO(mschulkind): Remove? Disabled because I'm not sure it makes sense.
-        # If workspace config doesn't have the key, try output
-        #  output = workspace.ipc_data["output"]
-        #  if output:
-        #  try:
-        #  return self.configDict[TABLE_OUTPUT][output][key]
-        #  except KeyError:
-        #  pass
-
-        # If output config doesn't have the key, fallback to default
+        # Fallback to default
         try:
             return self.configDict[TABLE_LAYMAN][key]
         except KeyError:

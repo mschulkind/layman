@@ -294,6 +294,30 @@ For full integration testing with a real window manager:
 
 ### Prerequisites
 
+**Option 1: Headless Sway (Recommended for CI)**
+
+Sway can run in headless mode without a display using wlroots' headless backend:
+
+```bash
+# Set environment variables
+export WLR_BACKENDS=headless
+export WLR_LIBINPUT_NO_DEVICES=1
+export XDG_RUNTIME_DIR=/tmp/xdg-runtime
+export WAYLAND_DISPLAY=wayland-test
+
+# Create runtime directory
+mkdir -p $XDG_RUNTIME_DIR
+chmod 0700 $XDG_RUNTIME_DIR
+
+# Start headless Sway
+sway -c /dev/null &
+
+# Run integration tests
+just test-integration
+```
+
+**Option 2: Xvfb with i3 (Legacy)**
+
 - Xvfb (virtual X server)
 - i3 window manager
 - x11-apps (for xterm, xclock test windows)

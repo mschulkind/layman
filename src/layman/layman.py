@@ -35,6 +35,7 @@ from i3ipc import BindingEvent, Con, Connection, WindowEvent, WorkspaceEvent
 from setproctitle import setproctitle
 
 from layman import config, utils
+from layman.config import ConfigError
 from layman.listener import ListenerThread
 from layman.managers import (
     AutotilingLayoutManager,
@@ -312,6 +313,10 @@ class Layman:
         # command or pass it on to i3/Sway if it is not.
         if command.startswith("nop layman"):
             for command in command.split(";"):
+                command = command.strip()
+                # Decision #6: Filter empty commands
+                if not command:
+                    continue
                 if command.startswith("nop layman"):
                     command = command.replace("nop layman ", "").strip()
                     self.handleCommand(command)
@@ -321,6 +326,9 @@ class Layman:
     def onCommand(self, command):
         for command in command.split(";"):
             command = command.strip()
+            # Decision #6: Filter empty commands
+            if not command:
+                continue
             self.handleCommand(command)
 
     def handleCommand(self, command: str):
@@ -476,9 +484,8 @@ class Layman:
                 f"Attempting to set layout for excluded workspace {workspaceName}"
             )
             return
-        #
-        # Pass any built-in layouts to i3/Sway.
 
+        # Pass any built-in layouts to i3/Sway.
         if layoutName in ("splitv", "splith", "tabbed", "stacking"):
             state.layoutManager = None
             if workspace:
@@ -490,10 +497,12 @@ class Layman:
                     self.conn, workspace, workspaceName, self.options
                 )
             else:
-                self.log(
-                    f"Can't find layout manager named {layoutName} for workspace {workspaceName}"
+                # Decision #3: Raise exception on unknown layout
+                available = list(self.builtinLayouts.keys()) + list(self.userLayouts.keys())
+                raise ConfigError(
+                    f"Unknown layout '{layoutName}' for workspace {workspaceName}. "
+                    f"Available layouts: {', '.join(available)}"
                 )
-                return
 
         self.log(f"Initialized workspace {workspaceName} with layout {layoutName}")
 
@@ -576,6 +585,9 @@ class Layman:
         self.conn = Connection()
         notificationQueue = SimpleQueue()
 
+        # Get pipe path from config (Decision #17)
+        pipe_path = self.options.getDefault(config.KEY_PIPE_PATH)
+
         # In order to shrink the window for race conditions as much as possible, we get the full
         # current container tree, and then immediately set up all listeners before continuing on
         # with any further initialization. The subscriptions are not actually created inside i3ipc
@@ -583,7 +595,7 @@ class Layman:
         # we don't miss any notifications.
         tree = self.conn.get_tree()
         ListenerThread(notificationQueue)
-        MessageServer(notificationQueue)
+        MessageServer(notificationQueue, pipe_path)
 
         # Set default layout mangers for existing workspaces
         for workspace in tree.workspaces():

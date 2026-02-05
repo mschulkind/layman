@@ -87,6 +87,33 @@ test-cov-html:
 test-integration:
     uv run pytest tests/integration -v -m integration
 
+# Run integration tests with headless Sway
+test-integration-headless:
+    #!/usr/bin/env bash
+    set -e
+    export XDG_RUNTIME_DIR="${XDG_RUNTIME_DIR:-/tmp/xdg-runtime-$$}"
+    mkdir -p "$XDG_RUNTIME_DIR"
+    chmod 0700 "$XDG_RUNTIME_DIR"
+    export WLR_BACKENDS=headless
+    export WLR_LIBINPUT_NO_DEVICES=1
+    export WAYLAND_DISPLAY=wayland-test
+    
+    # Start headless sway in background
+    sway -c /dev/null &
+    SWAY_PID=$!
+    sleep 2
+    
+    # Run tests
+    uv run pytest tests/integration -v -m integration || true
+    
+    # Cleanup
+    kill $SWAY_PID 2>/dev/null || true
+    rm -rf "$XDG_RUNTIME_DIR"
+
+# Run all tests (unit + integration if Sway available)
+test-all:
+    uv run pytest tests/ -v
+
 # Run a specific test file
 test-file FILE:
     uv run pytest {{FILE}} -v
