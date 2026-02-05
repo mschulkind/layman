@@ -7,6 +7,7 @@ excludeOutputs = ["HDMI-A-2"]
 masterWidth = 50
 stackLayout = "splitv"
 stackSide = "right"
+visibleStackLimit = 3
 depthLimit = 0
 
 [workspace.1]
@@ -15,11 +16,13 @@ debug = true
 masterWidth = 60
 stackLayout = "tabbed"
 stackSide = "left"
+visibleStackLimit = 5
 depthLimit = 3
 
 [workspace.2]
 defaultLayout = "Autotiling"
 depthLimit = 4
+visibleStackLimit = 4
 
 [workspace.3]
 defaultLayout = "Grid"

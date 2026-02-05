@@ -74,14 +74,14 @@ This document tracks decisions that have been implemented. Each decision is mark
 
 ## Configuration Options
 
-### 9. `depthLimit` Renaming ✅ RESOLVED
+### 9. Visible stack limit option ✅ RESOLVED
 
-**Decision:** Rename MasterStack's option to `substackThreshold`
-**Date:** 2026-02-04
+**Decision:** Introduce `visibleStackLimit` (default 3) and retire `depthLimit`/`substackThreshold`
+**Date:** 2026-02-05
 **Implementation:** 
-- Config key changed from `depthLimit` to `substackThreshold`
-- Autotiling keeps `depthLimit` (different meaning)
-- Updated config.toml, docs, and tests
+- Config key renamed to `visibleStackLimit` with default 3 (0 used only if explicitly set)
+- Validation enforces a positive integer and the logic to create substacks references this limit
+- Updated config.toml, docs, and tests to reflect the new name and default
 
 ### 10. masterWidth Validation ✅ RESOLVED
 

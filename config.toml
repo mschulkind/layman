@@ -16,7 +16,7 @@ depthLimit = 0                # Autotiling: Default depth limit (disabled) for a
 stackLayout = "splitv"        # MasterStack: Default stack layout (splitv, splith, stacking, tabbed)
 stackSide = "right"           # MasterStack: Default stack position (left, right)
 masterWidth = 50              # MasterStack: Default master width (1-99, can be float like 33.3)
-substackThreshold = 0         # MasterStack: Windows before creating substack (0 = disabled)
+visibleStackLimit = 3         # MasterStack: Max visible stack windows before stacking (default 3)
 
 
 # `workspace` sections configure options for the specified workspace.
@@ -31,4 +31,4 @@ depthLimit = 0                # Autotiling: Depth limit for this workspace
 stackLayout = "splitv"        # MasterStack: Stack layout for this workspace
 stackSide = "right"           # MasterStack: Stack position for this workspace
 masterWidth = 50              # MasterStack: Master width for this workspace (1-99)
-substackThreshold = 0         # MasterStack: Substack threshold for this workspace
+visibleStackLimit = 3         # MasterStack: Max visible stack windows before stacking (default 3)

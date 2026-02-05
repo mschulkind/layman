@@ -43,24 +43,24 @@ defaultLayout = "MasterStack"
 masterWidth = 50
 stackLayout = "splitv"
 stackSide = "right"
-depthLimit = 0
+visibleStackLimit = 3
 
 [workspace.1]
 defaultLayout = "MasterStack"
-masterWidth = 60       # Master takes 60% width
-stackLayout = "tabbed" # Tabbed stack
-stackSide = "left"     # Stack on left
-depthLimit = 4         # Max 4 visible stack windows
+masterWidth = 60           # Master takes 60% width
+stackLayout = "tabbed"     # Tabbed stack
+stackSide = "left"         # Stack on left
+visibleStackLimit = 5      # More visible stack windows
 ```
 
 ### Options
 
 | Option | Type | Default | Values |
 |--------|------|---------|--------|
-| `masterWidth` | int | `50` | 1-99 (percent) |
-| `stackLayout` | string | `"splitv"` | splitv, splith, tabbed, stacking |
-| `stackSide` | string | `"right"` | left, right |
-| `depthLimit` | int | `0` | 0 = unlimited |
+| `masterWidth` | int or float | `50` | 0–100 exclusive (e.g., `50`, `33.3`) |
+| `stackLayout` | string | `"splitv"` | `splitv`, `splith`, `tabbed`, `stacking` |
+| `stackSide` | string | `"right"` | `left`, `right` |
+| `visibleStackLimit` | int | `3` | `0` = disabled, or any positive integer |
 
 ## Stack Layouts
 
@@ -147,12 +147,12 @@ layman rotate cw             # Rotate clockwise
 layman rotate ccw            # Rotate counter-clockwise
 ```
 
-## Depth Limit (Substack)
+## Visible Stack Limit (Substack)
 
-When `depthLimit > 0` and using `splitv`, excess stack windows go into a stacking subcontainer:
+When `visibleStackLimit > 0` and using `splitv`, excess stack windows are collapsed into a stacking subcontainer. The default is `3`.
 
 ```
-depthLimit = 3:
+visibleStackLimit = 3 (with 6 windows):
 ┌─────────┬──────────┐
 │         │ Stack 1  │  ← Visible
 │ Master  ├──────────┤
@@ -163,6 +163,10 @@ depthLimit = 3:
 │         │[4][5][6] │  ← Substack (stacking)
 └─────────┴──────────┘
 ```
+
+Set `visibleStackLimit = 0` to disable the substack and show all stack windows individually.
+
+> **Note:** The substack only activates with the `splitv` stack layout. Other layouts (tabbed, stacking, splith) already handle many windows compactly.
 
 ## Maximize Mode
 

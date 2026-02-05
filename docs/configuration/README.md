@@ -6,9 +6,10 @@ This section documents layman's configuration system.
 
 | File | Description |
 |------|-------------|
-| [options.md](options.md) | All configuration options |
-| [examples.md](examples.md) | Example configurations |
-| [sway-integration.md](sway-integration.md) | Sway/i3 config integration |
+| **[config-reference.md](config-reference.md)** | **Complete configuration reference** — every option explained with examples |
+| [options.md](options.md) | Quick-reference option summary table |
+| [examples.md](examples.md) | Example configurations for common setups |
+| [sway-integration.md](sway-integration.md) | Sway/i3 keybinding integration |
 
 ## Configuration File Location
 

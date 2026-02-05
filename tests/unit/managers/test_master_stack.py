@@ -21,7 +21,7 @@ from layman.managers.master_stack import (
     KEY_MASTER_WIDTH,
     KEY_STACK_LAYOUT,
     KEY_STACK_SIDE,
-    KEY_SUBSTACK_THRESHOLD,
+    KEY_VISIBLE_STACK_LIMIT,
 )
 from tests.mocks.i3ipc_mocks import (
     MockConnection,
@@ -120,7 +120,7 @@ class TestMasterStackInit:
         assert basic_manager.masterWidth == 50
         assert basic_manager.stackSide == Side.RIGHT
         assert basic_manager.stackLayout == StackLayout.SPLITV
-        assert basic_manager.substackThreshold == 0
+        assert basic_manager.visibleStackLimit == 3
         assert basic_manager.substackExists is False
         assert basic_manager.lastFocusedWindowId is None
         assert basic_manager.maximized is False
@@ -133,7 +133,7 @@ class TestMasterStackInit:
 masterWidth = 60
 stackLayout = "tabbed"
 stackSide = "left"
-substackThreshold = 3
+visibleStackLimit = 5
 """
         )
         manager = manager_factory(config)
@@ -141,7 +141,7 @@ substackThreshold = 3
         assert manager.masterWidth == 60
         assert manager.stackLayout == StackLayout.TABBED
         assert manager.stackSide == Side.LEFT
-        assert manager.substackThreshold == 3
+        assert manager.visibleStackLimit == 5
 
     def test_init_invalidMasterWidth_raisesConfigError(
         self, manager_factory, temp_config
@@ -760,6 +760,31 @@ class TestToggleMaximize:
         basic_manager.toggleMaximize(workspace)
 
         assert basic_manager.maximized is False
+
+
+class TestVisibleStackLimitBehavior:
+    """Tests for MasterStack visible stack limit evaluation."""
+
+    def test_shouldSubstackExist_afterThreshold(self, basic_manager):
+        basic_manager.visibleStackLimit = 2
+        basic_manager.stackLayout = StackLayout.SPLITV
+        basic_manager.windowIds = [100, 200, 300]
+
+        assert basic_manager.shouldSubstackExist()
+
+    def test_shouldSubstackExist_beforeThreshold(self, basic_manager):
+        basic_manager.visibleStackLimit = 3
+        basic_manager.stackLayout = StackLayout.SPLITV
+        basic_manager.windowIds = [100, 200]
+
+        assert not basic_manager.shouldSubstackExist()
+
+    def test_shouldSubstackExist_requiresSplitv(self, basic_manager):
+        basic_manager.visibleStackLimit = 2
+        basic_manager.stackLayout = StackLayout.STACKING
+        basic_manager.windowIds = [100, 200, 300]
+
+        assert not basic_manager.shouldSubstackExist()
 
 
 # =============================================================================
