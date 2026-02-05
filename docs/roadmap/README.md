@@ -10,6 +10,9 @@ This section tracks planned features, known bugs, and improvements for layman.
 | [features.md](features.md) | Planned new features |
 | [improvements.md](improvements.md) | Codebase improvements |
 | [modernization.md](modernization.md) | Project modernization tasks |
+| [code-simplification.md](code-simplification.md) | Cyclomatic complexity & SOLID refactoring |
+| [type-safety.md](type-safety.md) | Type safety and modernization plan |
+| [sway-ipc-optimization.md](sway-ipc-optimization.md) | Sway IPC communication optimization |
 
 ## Feature Designs
 
@@ -21,6 +24,7 @@ Detailed design documents for major features:
 | [fake-fullscreen.md](fake-fullscreen.md) | Fullscreen without hiding waybar | High |
 | [tabbed-pairs.md](tabbed-pairs.md) | Paired windows in tabbed substructure | High |
 | [session-restore.md](session-restore.md) | Save and restore window layouts | Medium |
+| [code-simplification.md](code-simplification.md) | Reduce complexity, apply SOLID patterns | Medium |
 
 ## Quick Overview
 
@@ -34,13 +38,15 @@ Detailed design documents for major features:
 ### Medium Priority
 
 5. **Session restore** - Remember window positions across reboots
-6. **Type checking** - Add ty/pyright for type safety
+6. **Code simplification** - Reduce cyclomatic complexity, apply SOLID principles
+7. **Type safety** - Resolve all `ty` errors and achieve 100% type coverage
+8. **Sway IPC optimization** - Command batching, caching, and event optimization
 
 ### Lower Priority
 
-7. **UV modernization** - Full uv project configuration
-8. **Test suite** - Automated testing
-9. **General improvements** - Code quality, documentation
+8. **UV modernization** - Full uv project configuration
+9. **Test suite** - Automated testing
+10. **General improvements** - Code quality, documentation
 
 ## Status Legend
 

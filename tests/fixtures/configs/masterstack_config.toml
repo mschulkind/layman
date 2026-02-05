@@ -1,0 +1,25 @@
+# Full MasterStack configuration for testing
+[layman]
+defaultLayout = "MasterStack"
+debug = false
+excludeWorkspaces = []
+excludeOutputs = []
+masterWidth = 60
+stackLayout = "splitv"
+stackSide = "right"
+depthLimit = 0
+
+[workspace.1]
+defaultLayout = "MasterStack"
+masterWidth = 55
+stackLayout = "splitv"
+stackSide = "right"
+
+[workspace.2]
+defaultLayout = "Autotiling"
+depthLimit = 3
+
+[workspace."coding"]
+defaultLayout = "MasterStack"
+masterWidth = 70
+stackLayout = "tabbed"
