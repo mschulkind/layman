@@ -18,7 +18,7 @@ run-debug:
 # ============== Linting ==============
 
 # Run all linters
-lint: lint-python lint-docs
+lint: lint-python lint-docs typecheck
     @echo "✓ All linting passed"
 
 # Lint Python code with ruff
@@ -26,13 +26,28 @@ lint-python:
     uv run ruff check src/
     uv run ruff format --check src/
 
+# Analyze cyclomatic complexity
+complexity:
+    @echo "Cyclomatic Complexity Analysis:"
+    uvx radon cc src/layman -a -s
+    @echo ""
+    @echo "Maintainability Index:"
+    uvx radon mi src/layman -s
+
+# Check complexity thresholds (fail on D or F grade)
+complexity-check:
+    @echo "Checking for high-complexity functions (D or F grade)..."
+    @uvx radon cc src/layman -a -s -nc || (echo "✗ Found functions with D/F complexity grade" && exit 1)
+    @echo "✓ All functions have acceptable complexity"
+
 # Lint documentation (markdown and mermaid)
 lint-docs:
     pnpm exec markdownlint-cli2 "docs/**/*.md" "*.md"
+    just validate-mermaid
 
-# Type check with ty (if available)
+# Type check with ty
 typecheck:
-    uv run ty check src/ || echo "ty not installed or type errors found"
+    uv run ty check src/
 
 # ============== Formatting ==============
 
@@ -47,9 +62,42 @@ format-python:
 
 # ============== Testing ==============
 
-# Run tests
+# Run all unit tests
 test:
-    uv run pytest tests/ -v || echo "No tests found or pytest not installed"
+    uv run pytest tests/unit -v
+
+# Run tests with fast fail (stop on first failure)
+test-fast:
+    uv run pytest tests/unit -v -x
+
+# Run tests with verbose output (show print statements)
+test-verbose:
+    uv run pytest tests/unit -vvv -s
+
+# Run tests with coverage report
+test-cov:
+    uv run pytest tests/unit -v --cov --cov-report=term-missing
+
+# Run tests with HTML coverage report
+test-cov-html:
+    uv run pytest tests/unit -v --cov --cov-report=html
+    @echo "Coverage report: htmlcov/index.html"
+
+# Run integration tests (requires running Sway/i3)
+test-integration:
+    uv run pytest tests/integration -v -m integration
+
+# Run a specific test file
+test-file FILE:
+    uv run pytest {{FILE}} -v
+
+# Run tests matching a pattern
+test-match PATTERN:
+    uv run pytest tests/unit -v -k "{{PATTERN}}"
+
+# Run tests and drop into debugger on failure
+test-debug:
+    uv run pytest tests/unit -v --pdb --pdb-first
 
 # ============== Setup ==============
 
@@ -67,10 +115,22 @@ setup-node:
 
 # ============== Documentation ==============
 
-# Validate mermaid diagrams in docs
+# Validate mermaid diagrams by actually rendering them
 validate-mermaid:
-    @echo "Validating Mermaid diagrams..."
-    @python3 scripts/validate_mermaid.py || echo "Mermaid validation script not found"
+    #!/usr/bin/env bash
+    set -euo pipefail
+    echo "Rendering Mermaid diagrams to validate..."
+    find docs -name "*.md" -type f | while read -r file; do \
+        if grep -q '```mermaid' "$file"; then \
+            echo "Validating $file..."; \
+            if ! pnpm exec mmdc -i "$file" -o /tmp/mermaid-test.svg 2>&1 | grep -v "Warning:"; then \
+                echo "✗ Validation failed for $file"; \
+                exit 1; \
+            fi; \
+        fi; \
+    done
+    echo "✓ All mermaid diagrams rendered successfully"
+
 
 # ============== Release ==============
 

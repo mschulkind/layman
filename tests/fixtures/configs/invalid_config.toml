@@ -1,0 +1,4 @@
+# Invalid TOML for error handling tests
+[layman
+debug = true
+this is not valid TOML

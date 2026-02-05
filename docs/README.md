@@ -49,7 +49,7 @@ graph TB
     subgraph "External"
         SWAY[Sway/i3]
         CFG[config.toml]
-        PIPE[/tmp/layman.pipe]
+        PIPE["Named Pipe<br/>/tmp/layman.pipe"]
     end
 
     SWAY -->|i3ipc events| LS

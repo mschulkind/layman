@@ -1,0 +1,34 @@
+# Valid configuration with all options
+[layman]
+defaultLayout = "MasterStack"
+debug = true
+excludeWorkspaces = ["10"]
+excludeOutputs = ["HDMI-A-2"]
+masterWidth = 50
+stackLayout = "splitv"
+stackSide = "right"
+depthLimit = 0
+
+[workspace.1]
+defaultLayout = "MasterStack"
+debug = true
+masterWidth = 60
+stackLayout = "tabbed"
+stackSide = "left"
+depthLimit = 3
+
+[workspace.2]
+defaultLayout = "Autotiling"
+depthLimit = 4
+
+[workspace.3]
+defaultLayout = "Grid"
+
+[workspace."media"]
+defaultLayout = "none"
+
+[workspace."coding"]
+defaultLayout = "MasterStack"
+masterWidth = 65
+stackLayout = "stacking"
+stackSide = "right"

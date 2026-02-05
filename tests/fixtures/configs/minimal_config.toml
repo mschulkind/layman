@@ -1,0 +1,4 @@
+# Minimal configuration for testing
+[layman]
+debug = false
+defaultLayout = "none"
