@@ -12,13 +12,18 @@ defaultLayout = "Autotiling"
 ```toml
 [layman]
 defaultLayout = "none"
-excludeWorkspaces = ["9", "10"]
-excludeOutputs = []
+excludedWorkspaces = ["9", "10"]
 debug = false
+pipePath = "/tmp/layman.pipe"
+
+# Autotiling
 depthLimit = 0
+
+# MasterStack
 stackLayout = "splitv"
 stackSide = "right"
 masterWidth = 50
+visibleStackLimit = 3
 
 # Workspace 1: MasterStack with tabbed stack
 [workspace.1]
@@ -41,6 +46,7 @@ defaultLayout = "Grid"
 defaultLayout = "MasterStack"
 stackSide = "left"
 masterWidth = 65
+visibleStackLimit = 5
 
 # Coding workspace: Debug enabled
 [workspace.coding]
@@ -56,12 +62,14 @@ stackLayout = "splitv"
 [layman]
 debug = false
 defaultLayout = "Autotiling"
+excludedWorkspaces = ["9"]
 
 # Main coding workspace
 [workspace.1]
 defaultLayout = "MasterStack"
 masterWidth = 65
 stackLayout = "splitv"
+visibleStackLimit = 4
 
 # Browser/docs workspace
 [workspace.2]
@@ -71,10 +79,6 @@ depthLimit = 2
 # Terminal workspace
 [workspace.3]
 defaultLayout = "Grid"
-
-# Music/media - excluded
-[workspace.9]
-# Handled by excludeWorkspaces
 ```
 
 ## Ultrawide Monitor
@@ -84,6 +88,7 @@ defaultLayout = "Grid"
 defaultLayout = "MasterStack"
 masterWidth = 40  # Larger master for ultrawide
 stackLayout = "splitv"
+visibleStackLimit = 5  # More visible stack windows on a wide screen
 
 [workspace.1]
 masterWidth = 35  # Even wider stack for coding
@@ -94,7 +99,6 @@ masterWidth = 35  # Even wider stack for coding
 ```toml
 [layman]
 defaultLayout = "Autotiling"
-excludeOutputs = ["DP-3"]  # External monitor excluded
 
 [workspace.1]
 defaultLayout = "MasterStack"

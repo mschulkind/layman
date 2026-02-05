@@ -1,13 +1,15 @@
 # Configuration Options
 
+This is a summary of all available options. For a comprehensive reference with examples and visual diagrams, see the **[Configuration Reference](config-reference.md)**.
+
 ## Global Options (`[layman]`)
 
 | Option | Type | Default | Description |
 |--------|------|---------|-------------|
 | `defaultLayout` | string | `"none"` | Default layout for new workspaces |
-| `excludeWorkspaces` | array | `[]` | Workspace names to exclude from management |
-| `excludeOutputs` | array | `[]` | Output names to exclude |
+| `excludedWorkspaces` | array | `[]` | Workspace names to exclude from management |
 | `debug` | bool | `false` | Enable debug logging |
+| `pipePath` | string | `"/tmp/layman.pipe"` | Path to the named pipe for IPC commands |
 
 ## Autotiling Options
 
@@ -19,10 +21,10 @@
 
 | Option | Type | Default | Description |
 |--------|------|---------|-------------|
-| `masterWidth` | int | `50` | Master window width (1-99 percent) |
+| `masterWidth` | int or float | `50` | Master window width as percentage (0–100 exclusive) |
 | `stackLayout` | string | `"splitv"` | Stack layout: `splitv`, `splith`, `tabbed`, `stacking` |
 | `stackSide` | string | `"right"` | Stack position: `left` or `right` |
-| `depthLimit` | int | `0` | Max visible stack windows before substack (0 = unlimited) |
+| `visibleStackLimit` | int | `3` | Max visible stack windows before substack (0 = disabled) |
 
 ## Workspace Overrides (`[workspace.<name>]`)
 
@@ -39,39 +41,24 @@ debug = true
 defaultLayout = "none"
 ```
 
-## Output Configuration (`[output.<name>]`)
-
-**Note:** Output configuration is currently disabled in the code.
-
-```toml
-# Not currently used
-[output.HDMI-A-1]
-defaultLayout = "Grid"
-```
-
 ## Built-in Layouts
 
-| Short Name | Class | Description |
-|------------|-------|-------------|
-| `none` | WorkspaceLayoutManager | No management |
-| `Autotiling` | AutotilingLayoutManager | Spiral tiling |
-| `MasterStack` | MasterStackLayoutManager | Master + stack |
-| `Grid` | GridLayoutManager | Grid tiling |
-| `splitv` | (native) | Vertical split |
-| `splith` | (native) | Horizontal split |
-| `tabbed` | (native) | Tabbed layout |
-| `stacking` | (native) | Stacking layout |
+| Short Name | Description |
+|------------|-------------|
+| `none` | No management |
+| `Autotiling` | Spiral tiling based on window dimensions |
+| `MasterStack` | Master window + configurable stack |
+| `Grid` | Grid tiling by splitting the largest window |
+
+Sway/i3 native layouts (`splitv`, `splith`, `tabbed`, `stacking`) can also be set directly.
 
 ## Validation
 
-Invalid values are logged and defaults are used:
+Invalid configuration values cause layman to exit with a clear error message showing the valid options. For example:
 
-```python
-# masterWidth validation
-if isinstance(masterWidth, int) and masterWidth > 0 and masterWidth < 100:
-    self.masterWidth = masterWidth
-else:
-    self.logError("Invalid masterWidth...")
+```
+Invalid masterWidth '150'. Must be a number between 0 and 100 exclusive.
+Invalid stackLayout 'diagonal'. Valid options: splitv, splith, stacking, tabbed
 ```
 
 ## Debug Mode

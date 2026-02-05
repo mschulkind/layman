@@ -15,6 +15,12 @@ run:
 run-debug:
     uv run layman 2>&1 | tee /tmp/layman.log
 
+# ============== Quality ==============
+
+# Run all checks (format, lint, test)
+check: format lint test
+    @echo "✓ All checks passed"
+
 # ============== Linting ==============
 
 # Run all linters

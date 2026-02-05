@@ -28,7 +28,7 @@ from layman.managers.workspace import WorkspaceLayoutManager
 KEY_MASTER_WIDTH = "masterWidth"
 KEY_STACK_LAYOUT = "stackLayout"
 KEY_STACK_SIDE = "stackSide"
-KEY_SUBSTACK_THRESHOLD = "substackThreshold"
+KEY_VISIBLE_STACK_LIMIT = "visibleStackLimit"
 
 
 class StackLayout(Enum):
@@ -80,7 +80,7 @@ class MasterStackLayoutManager(WorkspaceLayoutManager):
     masterWidth: int
     stackLayout: StackLayout
     stackSide: Side
-    substackThreshold: int
+    visibleStackLimit: int
     substackExists: bool
     lastFocusedWindowId: int | None
     maximized: bool
@@ -134,13 +134,16 @@ class MasterStackLayoutManager(WorkspaceLayoutManager):
             or StackLayout.SPLITV
         )
 
-        # Decision #9: Renamed from depthLimit to substackThreshold
-        substackThreshold = options.getForWorkspace(workspaceName, KEY_SUBSTACK_THRESHOLD) or 0
-        if not isinstance(substackThreshold, int) or substackThreshold < 0 or substackThreshold == 1:
+        # Decision update: name change to visibleStackLimit (default 3)
+        stack_limit = options.getForWorkspace(workspaceName, KEY_VISIBLE_STACK_LIMIT)
+        if stack_limit is None:
+            stack_limit = 3
+        if isinstance(stack_limit, int) and stack_limit >= 0:
+            self.visibleStackLimit = stack_limit
+        else:
             raise ConfigError(
-                f"Invalid substackThreshold '{substackThreshold}'. Must be an integer greater than 1."
+                f"Invalid {KEY_VISIBLE_STACK_LIMIT} '{stack_limit}'. Must be a non-negative integer."
             )
-        self.substackThreshold = substackThreshold
 
         # If windows exist, fit them into MasterStack
         if workspace:
@@ -360,7 +363,7 @@ class MasterStackLayoutManager(WorkspaceLayoutManager):
                 self.moveWindowCommand(self.windowIds[0], self.windowIds[1])
                 self.swapWindowsCommand(self.windowIds[0], self.windowIds[1])
             elif positionAtIndex == 1 or (
-                self.substackExists and positionAtIndex == self.substackThreshold
+                self.substackExists and positionAtIndex == self.visibleStackLimit
             ):
                 # New first stack or first substack
                 self.moveWindowCommand(window.id, self.windowIds[positionAtIndex])
@@ -370,9 +373,9 @@ class MasterStackLayoutManager(WorkspaceLayoutManager):
 
         # If it was a new visible stack window and we have a substack, we need to demote a window
         # into the substack.
-        if self.substackExists and positionAtIndex < self.substackThreshold:
-            lastVisibleStack = self.windowIds[self.substackThreshold - 1]
-            firstSubstack = self.windowIds[self.substackThreshold]
+        if self.substackExists and positionAtIndex < self.visibleStackLimit:
+            lastVisibleStack = self.windowIds[self.visibleStackLimit - 1]
+            firstSubstack = self.windowIds[self.visibleStackLimit]
             self.moveWindowCommand(lastVisibleStack, firstSubstack)
             self.swapWindowsCommand(lastVisibleStack, firstSubstack)
 
@@ -419,11 +422,11 @@ class MasterStackLayoutManager(WorkspaceLayoutManager):
         if self.substackExists:
             # We need to rebalance the visible stack and the substack if a window was removed from
             # the visible stack or master.
-            if sourceIndex < self.substackThreshold:
+            if sourceIndex < self.visibleStackLimit:
                 # A visible stack window is being removed, so we need to promote a window from the
                 # substack.
-                lastVisibleStack = self.windowIds[self.substackThreshold - 2]
-                firstSubstack = self.windowIds[self.substackThreshold - 1]
+                lastVisibleStack = self.windowIds[self.visibleStackLimit - 2]
+                firstSubstack = self.windowIds[self.visibleStackLimit - 1]
                 self.moveWindowCommand(firstSubstack, lastVisibleStack)
 
             if not self.shouldSubstackExist():
@@ -432,8 +435,8 @@ class MasterStackLayoutManager(WorkspaceLayoutManager):
     def shouldSubstackExist(self):
         return (
             self.stackLayout == StackLayout.SPLITV
-            and self.substackThreshold > 0
-            and len(self.windowIds) > (self.substackThreshold + 1)
+            and self.visibleStackLimit > 0
+            and len(self.windowIds) > self.visibleStackLimit
         )
 
     def setStackLayout(self):
@@ -444,17 +447,17 @@ class MasterStackLayoutManager(WorkspaceLayoutManager):
 
     def createSubstackIfNeeded(self):
         if self.shouldSubstackExist() and not self.substackExists:
-            firstSubstack = self.windowIds[self.substackThreshold]
+            firstSubstack = self.windowIds[self.visibleStackLimit]
             self.command(f"[con_id={firstSubstack}] splitv, layout stacking")
-            for windowId in reversed(self.windowIds[self.substackThreshold + 1 :]):
+            for windowId in reversed(self.windowIds[self.visibleStackLimit + 1 :]):
                 self.moveWindowCommand(windowId, firstSubstack)
 
             self.substackExists = True
 
     def destroySubstackIfExists(self):
         if self.substackExists:
-            lastVisibleStack = self.windowIds[self.substackThreshold - 1]
-            for windowId in reversed(self.windowIds[self.substackThreshold :]):
+            lastVisibleStack = self.windowIds[self.visibleStackLimit - 1]
+            for windowId in reversed(self.windowIds[self.visibleStackLimit :]):
                 self.moveWindowCommand(windowId, lastVisibleStack)
 
             self.substackExists = False
@@ -547,8 +550,8 @@ class MasterStackLayoutManager(WorkspaceLayoutManager):
             self.swapWindowsCommand(self.windowIds[sourceIndex], topOfStackId)
         elif (
             self.substackExists
-            and targetIndex == self.substackThreshold
-            and sourceIndex > self.substackThreshold
+            and targetIndex == self.visibleStackLimit
+            and sourceIndex > self.visibleStackLimit
         ):
             # Top of substack from within the substack
             self.moveWindowCommand(
@@ -568,21 +571,21 @@ class MasterStackLayoutManager(WorkspaceLayoutManager):
             )
 
         if self.substackExists and not substackRebalanced:
-            if sourceIndex >= self.substackThreshold and targetIndex < self.substackThreshold:
+            if sourceIndex >= self.visibleStackLimit and targetIndex < self.visibleStackLimit:
                 # A substack window is being moved out of the substack, so we need to demote a
                 # window to refill the substack.
-                lastVisibleStack = self.windowIds[self.substackThreshold - 1]
-                firstSubstack = self.windowIds[self.substackThreshold]
+                lastVisibleStack = self.windowIds[self.visibleStackLimit - 1]
+                firstSubstack = self.windowIds[self.visibleStackLimit]
                 if firstSubstack == window.id:
-                    firstSubstack = self.windowIds[self.substackThreshold + 1]
+                    firstSubstack = self.windowIds[self.visibleStackLimit + 1]
                 self.moveWindowCommand(lastVisibleStack, firstSubstack)
                 self.swapWindowsCommand(lastVisibleStack, firstSubstack)
 
-            if sourceIndex < self.substackThreshold and targetIndex >= self.substackThreshold:
+            if sourceIndex < self.visibleStackLimit and targetIndex >= self.visibleStackLimit:
                 # A non-substack-window was added to the substack, so we need to promote a window
                 # from the substack to refill the visible stack.
-                lastVisibleStack = self.windowIds[self.substackThreshold - 1]
-                firstSubstack = self.windowIds[self.substackThreshold]
+                lastVisibleStack = self.windowIds[self.visibleStackLimit - 1]
+                firstSubstack = self.windowIds[self.visibleStackLimit]
                 self.moveWindowCommand(firstSubstack, lastVisibleStack)
 
         self.windowIds.remove(window.id)

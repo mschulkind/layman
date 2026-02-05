@@ -14,7 +14,7 @@ from layman.managers.master_stack import (
     KEY_MASTER_WIDTH,
     KEY_STACK_LAYOUT,
     KEY_STACK_SIDE,
-    KEY_SUBSTACK_THRESHOLD,
+    KEY_VISIBLE_STACK_LIMIT,
 )
 from tests.mocks.i3ipc_mocks import (
     MockConnection,
@@ -33,44 +33,57 @@ from tests.mocks.i3ipc_mocks import (
 class TestMasterStackConfigValidation:
     """Tests for config option validation."""
 
-    def test_substackThreshold_negative_raisesError(self, mock_connection, temp_config):
-        """Negative substackThreshold should raise ConfigError (Decision #2)."""
+    def test_visibleStackLimit_negative_raisesError(self, mock_connection, temp_config):
+        """Negative visibleStackLimit should raise ConfigError (Decision #2)."""
         from layman.config import ConfigError
         config = temp_config(
             """
 [layman]
-substackThreshold = -5
+visibleStackLimit = -5
 """
         )
         workspace = MockCon(name="1", type="workspace")
-        with pytest.raises(ConfigError, match="Invalid substackThreshold"):
+        with pytest.raises(ConfigError, match="Invalid visibleStackLimit"):
             MasterStackLayoutManager(mock_connection, workspace, "1", config)
 
-    def test_substackThreshold_one_raisesError(self, mock_connection, temp_config):
-        """substackThreshold of 1 should raise ConfigError (Decision #2)."""
-        from layman.config import ConfigError
+    def test_visibleStackLimit_zero_valid(self, mock_connection, temp_config):
+        """visibleStackLimit of 0 should be valid (disabled)."""
         config = temp_config(
             """
 [layman]
-substackThreshold = 1
-"""
-        )
-        workspace = MockCon(name="1", type="workspace")
-        with pytest.raises(ConfigError, match="Invalid substackThreshold"):
-            MasterStackLayoutManager(mock_connection, workspace, "1", config)
-
-    def test_substackThreshold_two_valid(self, mock_connection, temp_config):
-        """substackThreshold of 2 should be valid."""
-        config = temp_config(
-            """
-[layman]
-substackThreshold = 2
+visibleStackLimit = 0
 """
         )
         workspace = MockCon(name="1", type="workspace")
         manager = MasterStackLayoutManager(mock_connection, workspace, "1", config)
 
-        assert manager.substackThreshold == 2
+        assert manager.visibleStackLimit == 0
+
+    def test_visibleStackLimit_one_valid(self, mock_connection, temp_config):
+        """visibleStackLimit of 1 should be valid."""
+        config = temp_config(
+            """
+[layman]
+visibleStackLimit = 1
+"""
+        )
+        workspace = MockCon(name="1", type="workspace")
+        manager = MasterStackLayoutManager(mock_connection, workspace, "1", config)
+
+        assert manager.visibleStackLimit == 1
+
+    def test_visibleStackLimit_two_valid(self, mock_connection, temp_config):
+        """visibleStackLimit of 2 should be valid."""
+        config = temp_config(
+            """
+[layman]
+visibleStackLimit = 2
+"""
+        )
+        workspace = MockCon(name="1", type="workspace")
+        manager = MasterStackLayoutManager(mock_connection, workspace, "1", config)
+
+        assert manager.visibleStackLimit == 2
 
 
 # =============================================================================
@@ -172,7 +185,7 @@ class TestSubstackOperations:
         config = temp_config(
             """
 [layman]
-substackThreshold = 5
+visibleStackLimit = 5
 """
         )
         workspace = MockCon(name="1", type="workspace")

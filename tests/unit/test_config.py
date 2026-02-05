@@ -23,7 +23,7 @@ from layman.config import (
 KEY_MASTER_WIDTH = "masterWidth"
 KEY_STACK_LAYOUT = "stackLayout"
 KEY_STACK_SIDE = "stackSide"
-KEY_SUBSTACK_THRESHOLD = "depthLimit"
+KEY_VISIBLE_STACK_LIMIT = "visibleStackLimit"
 
 
 class TestLaymanConfigParse:
@@ -132,12 +132,12 @@ class TestLaymanConfigGetForWorkspace:
         assert valid_config.getForWorkspace("99", KEY_LAYOUT) == "MasterStack"
         assert valid_config.getForWorkspace("unknown", KEY_MASTER_WIDTH) == 50
 
-    def test_getForWorkspace_depthLimit_perWorkspace(self, valid_config):
-        """depthLimit should be workspace-specific."""
-        assert valid_config.getForWorkspace("1", KEY_SUBSTACK_THRESHOLD) == 3
-        assert valid_config.getForWorkspace("2", KEY_SUBSTACK_THRESHOLD) == 4
-        # Workspace 3 and default have 0
-        assert valid_config.getForWorkspace("3", KEY_SUBSTACK_THRESHOLD) == 0
+    def test_getForWorkspace_visibleStackLimit_perWorkspace(self, valid_config):
+        """visibleStackLimit should be workspace-specific."""
+        assert valid_config.getForWorkspace("1", KEY_VISIBLE_STACK_LIMIT) == 5
+        assert valid_config.getForWorkspace("2", KEY_VISIBLE_STACK_LIMIT) == 4
+        # Workspace 3 and default have 3
+        assert valid_config.getForWorkspace("3", KEY_VISIBLE_STACK_LIMIT) == 3
 
 
 class TestLaymanConfigEdgeCases:
