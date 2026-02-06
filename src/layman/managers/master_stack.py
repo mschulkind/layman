@@ -240,8 +240,8 @@ class MasterStackLayoutManager(WorkspaceLayoutManager):
             "rotate ccw": lambda: self.rotateWindows(workspace, "ccw"),
             "rotate cw": lambda: self.rotateWindows(workspace, "cw"),
             "swap master": lambda: self._swapWithMaster(workspace, focused),
-            "stack toggle": lambda: self.toggleStackLayout(),
-            "stackside toggle": lambda: self.toggleStackSide(workspace),
+            "toggle": lambda: self.toggleStackLayout(),
+            "side toggle": lambda: self.toggleStackSide(workspace),
             "maximize": lambda: self.toggleMaximize(workspace),
         }
 

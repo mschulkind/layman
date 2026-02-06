@@ -335,6 +335,14 @@ class Layman:
     def handleCommand(self, command: str):
         assert ";" not in command
 
+        # Handle reload (no workspace needed)
+        if command == "reload":
+            self.options = config.LaymanConfig(utils.getConfigPath())
+            setup_logging(self.options)
+            self.fetchUserLayouts()
+            self.log("Reloaded layman config")
+            return
+
         workspace = utils.findFocusedWorkspace(self.conn)
         if not workspace or self.workspaceStates[workspace.name].isExcluded:
             self.command(command)
@@ -342,7 +350,68 @@ class Layman:
 
         state = self.workspaceStates[workspace.name]
 
-        # Handle movement and focus commands
+        # Route "layout set <name>" and "layout maximize"
+        if command.startswith("layout "):
+            rest = command[len("layout ") :]
+            if rest.startswith("set "):
+                shortName = rest[len("set ") :]
+                self.setWorkspaceLayout(workspace, workspace.name, shortName)
+            elif rest == "maximize":
+                if state.layoutManager:
+                    self.log("Calling manager for workspace %s" % workspace.name)
+                    with layoutManagerReloader(self, workspace):
+                        state.layoutManager.onCommand("maximize", workspace)
+                else:
+                    self.log("No manager for workspace %s, ignoring" % workspace.name)
+            else:
+                self.logError(f"Unknown layout command: '{command}'")
+            return
+
+        # Route "window <subcommand>" → strip prefix, pass to manager
+        if command.startswith("window "):
+            manager_command = command[len("window ") :]
+            # Check move/focus overrides
+            if (
+                manager_command.startswith("move")
+                and (
+                    not state.layoutManager
+                    or not state.layoutManager.overridesMoveBinds
+                )
+            ) or (
+                manager_command.startswith("focus")
+                and (
+                    not state.layoutManager
+                    or not state.layoutManager.overridesFocusBinds
+                )
+            ):
+                self.command(manager_command)
+                self.log(
+                    'Handling bind "%s" for workspace %s'
+                    % (manager_command, workspace.name)
+                )
+                return
+
+            if state.layoutManager:
+                self.log("Calling manager for workspace %s" % workspace.name)
+                with layoutManagerReloader(self, workspace):
+                    state.layoutManager.onCommand(manager_command, workspace)
+            else:
+                self.log("No manager for workspace %s, ignoring" % workspace.name)
+            return
+
+        # Route "stack <subcommand>" → pass to manager
+        if command.startswith("stack "):
+            manager_command = command[len("stack ") :]
+            if state.layoutManager:
+                self.log("Calling manager for workspace %s" % workspace.name)
+                with layoutManagerReloader(self, workspace):
+                    state.layoutManager.onCommand(manager_command, workspace)
+            else:
+                self.log("No manager for workspace %s, ignoring" % workspace.name)
+            return
+
+        # Backwards compatibility: pass bare move/focus commands to Sway
+        # if the layout manager doesn't override them
         if (
             command.startswith("move")
             and (not state.layoutManager or not state.layoutManager.overridesMoveBinds)
@@ -354,21 +423,7 @@ class Layman:
             self.log('Handling bind "%s" for workspace %s' % (command, workspace.name))
             return
 
-        # Handle reload command
-        if command == "reload":
-            # Get user config options
-            self.options = config.LaymanConfig(utils.getConfigPath())
-            self.fetchUserLayouts()
-            self.log("Reloaded layman config")
-            return
-
-        # Handle wlm creation commands
-        if "layout" in command:
-            shortName = command.split(" ")[1]
-            self.setWorkspaceLayout(workspace, workspace.name, shortName)
-            return
-
-        # Pass unknown command to the appropriate wlm
+        # Pass remaining commands to the appropriate wlm
         if not state.layoutManager:
             self.log("No manager for workspace %s, ignoring" % workspace.name)
             return

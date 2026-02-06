@@ -625,7 +625,7 @@ class TestOnCommand:
         manager, workspace = manager_with_focus
         original = manager.stackLayout
 
-        manager.onCommand("stack toggle", workspace)
+        manager.onCommand("toggle", workspace)
 
         assert manager.stackLayout != original
 

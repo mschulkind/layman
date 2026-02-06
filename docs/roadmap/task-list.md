@@ -62,10 +62,10 @@ These are resolved per [decisions.md](../decisions.md) and the current codebase:
 | 4 | Command dispatch table for `onCommand` | ✅ | [code-simplification.md](code-simplification.md) |
 | 5 | Break up `moveWindowToIndex` (CC=27) | ✅ | [code-simplification.md](code-simplification.md) |
 | 6 | Break up `moveWindowHorizontally` (CC=21) | ✅ | [code-simplification.md](code-simplification.md) |
-| 7 | Resolve `ty` type errors (core + utils) | ⬜ | [type-safety.md](type-safety.md) |
-| 8 | Full type annotations on base `WorkspaceLayoutManager` | ⬜ | [type-safety.md](type-safety.md) |
-| 9 | Fix minor bugs: focus race condition, inconsistent logging | ⬜ | [bugs.md](bugs.md) |
-| 9a | Structured logging with levels and per-module control | ⬜ | New |
+| 7 | Resolve `ty` type errors (core + utils) | ✅ | [type-safety.md](type-safety.md) |
+| 8 | Full type annotations on base `WorkspaceLayoutManager` | ✅ | [type-safety.md](type-safety.md) |
+| 9 | Fix minor bugs: focus race condition, inconsistent logging | ✅ | [bugs.md](bugs.md) |
+| 9a | Structured logging with levels and per-module control | ✅ | New |
 
 ### 3. Extract `isExcluded()` to base class
 

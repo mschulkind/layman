@@ -1,19 +1,20 @@
 # Start layman
 exec layman
 
-# Toggle layout managers
-bindsym $mod+a nop layman layout Autotiling
-bindsym $mod+m nop layman layout MasterStack
-bindsym $mod+n nop layman layout none
-bindsym $mod+g nop layman layout Grid
+# Set layouts
+bindsym $mod+a nop layman layout set Autotiling
+bindsym $mod+m nop layman layout set MasterStack
+bindsym $mod+n nop layman layout set none
+bindsym $mod+g nop layman layout set Grid
 
 # For MasterStack
-bindsym $mod+s nop layman swap master
+bindsym $mod+s nop layman window swap master
 bindsym $mod+t nop layman stack toggle
-bindsym $mod+r nop layman stackside toggle
+bindsym $mod+r nop layman stack side toggle
+bindsym $mod+f nop layman layout maximize
 
 # Override move binds
-bindsym $mod+Shift+Left nop layman move left
-bindsym $mod+Shift+Down nop layman move down
-bindsym $mod+Shift+Up nop layman move up
-bindsym $mod+Shift+Right nop layman move right
+bindsym $mod+Shift+Left nop layman window move left
+bindsym $mod+Shift+Down nop layman window move down
+bindsym $mod+Shift+Up nop layman window move up
+bindsym $mod+Shift+Right nop layman window move right

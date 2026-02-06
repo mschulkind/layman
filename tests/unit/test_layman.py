@@ -69,28 +69,28 @@ class TestLaymanCommandParsing:
 
     def test_isLaymanCommand_recognizesNopLayman(self):
         """Should recognize 'nop layman' prefix."""
-        binding = MockBindingEvent(command="nop layman maximize")
+        binding = MockBindingEvent(command="nop layman layout maximize")
         
         # The binding.command starts with "nop layman"
         assert binding.binding.command.startswith("nop layman")
 
     def test_commandSplitting_multipleCommands(self):
         """Commands should be split by semicolon."""
-        commands = "move up; focus down; stack toggle"
+        commands = "window move up; window focus down; stack toggle"
         parts = [cmd.strip() for cmd in commands.split(";")]
         
         assert len(parts) == 3
-        assert parts[0] == "move up"
-        assert parts[1] == "focus down"
+        assert parts[0] == "window move up"
+        assert parts[1] == "window focus down"
         assert parts[2] == "stack toggle"
 
     def test_commandSplitting_singleCommand(self):
         """Single command should work without semicolon."""
-        commands = "maximize"
+        commands = "layout maximize"
         parts = [cmd.strip() for cmd in commands.split(";")]
         
         assert len(parts) == 1
-        assert parts[0] == "maximize"
+        assert parts[0] == "layout maximize"
 
 
 class TestLaymanStateManagement:

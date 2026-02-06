@@ -138,8 +138,8 @@ class TestMessageServerIntegration:
             # Here we just verify the queue interface
 
             # Put a test message
-            queue.put({"type": "command", "command": "maximize"})
+            queue.put({"type": "command", "command": "layout maximize"})
 
             message = queue.get()
             assert message["type"] == "command"
-            assert message["command"] == "maximize"
+            assert message["command"] == "layout maximize"
