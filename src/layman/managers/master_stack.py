@@ -28,6 +28,7 @@ KEY_MASTER_WIDTH = "masterWidth"
 KEY_STACK_LAYOUT = "stackLayout"
 KEY_STACK_SIDE = "stackSide"
 KEY_VISIBLE_STACK_LIMIT = "visibleStackLimit"
+KEY_MASTER_COUNT = "masterCount"
 
 
 class StackLayout(Enum):
@@ -80,6 +81,7 @@ class MasterStackLayoutManager(WorkspaceLayoutManager):
     stackLayout: StackLayout
     stackSide: Side
     visibleStackLimit: int
+    masterCount: int
     substackExists: bool
     lastFocusedWindowId: int | None
     maximized: bool
@@ -145,6 +147,17 @@ class MasterStackLayoutManager(WorkspaceLayoutManager):
         else:
             raise ConfigError(
                 f"Invalid {KEY_VISIBLE_STACK_LIMIT} '{stack_limit}'. Must be a non-negative integer."
+            )
+
+        # Multi-master support (default 1)
+        master_count = options.getForWorkspace(workspaceName, KEY_MASTER_COUNT)
+        if master_count is None:
+            master_count = 1
+        if isinstance(master_count, int) and master_count >= 1:
+            self.masterCount = master_count
+        else:
+            raise ConfigError(
+                f"Invalid {KEY_MASTER_COUNT} '{master_count}'. Must be an integer >= 1."
             )
 
         # If windows exist, fit them into MasterStack
@@ -243,6 +256,8 @@ class MasterStackLayoutManager(WorkspaceLayoutManager):
             "toggle": lambda: self.toggleStackLayout(),
             "side toggle": lambda: self.toggleStackSide(workspace),
             "maximize": lambda: self.toggleMaximize(workspace),
+            "master add": lambda: self._addMaster(workspace),
+            "master remove": lambda: self._removeMaster(workspace),
         }
 
         handler = dispatch.get(command)
@@ -274,6 +289,61 @@ class MasterStackLayoutManager(WorkspaceLayoutManager):
             except ValueError:
                 pass
         self.log("Usage: move to index <i>")
+
+    # -------------------------------------------------------------------------
+    # Multi-master commands
+    # -------------------------------------------------------------------------
+
+    def _addMaster(self, workspace: Con) -> None:
+        """Increase the master count and re-arrange."""
+        if self.masterCount >= len(self.windowIds):
+            self.log("Cannot add more masters than windows")
+            return
+        self.masterCount += 1
+        self.log(f"Master count increased to {self.masterCount}")
+        self.arrangeWindows(workspace)
+
+    def _removeMaster(self, workspace: Con) -> None:
+        """Decrease the master count and re-arrange."""
+        if self.masterCount <= 1:
+            self.log("Cannot have fewer than 1 master")
+            return
+        self.masterCount -= 1
+        self.log(f"Master count decreased to {self.masterCount}")
+        self.arrangeWindows(workspace)
+
+    def getMasterIds(self) -> list[int]:
+        """Return the list of master window IDs (first N windows where N = masterCount)."""
+        return self.windowIds[: self.masterCount]
+
+    def getStackIds(self) -> list[int]:
+        """Return the list of stack window IDs (all after masterCount)."""
+        return self.windowIds[self.masterCount :]
+
+    def _arrangeMultiMaster(self) -> None:
+        """Arrange the master area to display multiple masters stacked vertically.
+
+        With N masters:
+        ┌─────────┬──────────┐
+        │ Master1 │ Stack 1  │
+        ├─────────┤──────────┤
+        │ Master2 │ Stack 2  │
+        ├─────────┤──────────┤
+        │ Master3 │ Stack 3  │
+        └─────────┴──────────┘
+        """
+        masterIds = self.getMasterIds()
+        if len(masterIds) <= 1:
+            return
+
+        # Set the first master to split vertically
+        self.command(f"[con_id={masterIds[0]}] splitv")
+
+        # Move additional masters below the first one in the master area
+        for i in range(1, len(masterIds)):
+            self.moveWindowCommand(masterIds[i], masterIds[i - 1])
+
+        self.log(f"Arranged {len(masterIds)} masters vertically")
 
     def isFloating(self, window: Con) -> bool:
         i3Floating = window.floating is not None and "on" in window.floating
@@ -337,6 +407,10 @@ class MasterStackLayoutManager(WorkspaceLayoutManager):
             )
 
         self.removeExtraNesting(workspace)
+
+        # Multi-master: arrange master area for multiple masters
+        if self.masterCount > 1 and len(self.windowIds) > self.masterCount:
+            self._arrangeMultiMaster()
 
     def pushWindow(self, workspace: Con, window: Con, positionAfter: Con | None = None):
         positionAtIndex: int = 0

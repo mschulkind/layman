@@ -428,6 +428,17 @@ class Layman:
                 self.log("No manager for workspace %s, ignoring" % workspace.name)
             return
 
+        # Route "master <subcommand>" → pass to manager
+        if command.startswith("master "):
+            manager_command = command  # Pass full command (e.g. "master add")
+            if state.layoutManager:
+                self.log("Calling manager for workspace %s" % workspace.name)
+                with layoutManagerReloader(self, workspace):
+                    state.layoutManager.onCommand(manager_command, workspace)
+            else:
+                self.log("No manager for workspace %s, ignoring" % workspace.name)
+            return
+
         # Backwards compatibility: pass bare move/focus commands to Sway
         # if the layout manager doesn't override them
         if (
