@@ -121,6 +121,7 @@ layman --log-level debug                    # override global level from CLI
 ```
 
 This replaces the boolean `debug` flag, the `self.log()` / `self.logError()` / `self.logCaller()` methods, and the `inspect.stack()` caller-name hack (the `logging` module provides this natively via `%(funcName)s`).
+
 ---
 
 ## Phase 3 — Command Naming & UX
