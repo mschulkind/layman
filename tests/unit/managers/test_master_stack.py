@@ -383,7 +383,58 @@ class TestWindowFocused:
         assert basic_manager.lastKnownMasterWidth == 720
 
 
-class TestWindowFloating:
+class TestWindowMoved:
+    """Tests for windowMoved() event handler."""
+
+    def test_windowMoved_floatingWindow_ignored(self, basic_manager):
+        """Floating windows should not update lastKnownMasterWidth."""
+        basic_manager.lastKnownMasterWidth = 500
+        window = MockCon(id=100, type="floating_con", floating="auto_on")
+        event = MockWindowEvent(change="move", container=window)
+        workspace = MockCon(name="1", type="workspace")
+
+        basic_manager.windowMoved(event, workspace, window)
+
+        assert basic_manager.lastKnownMasterWidth == 500
+
+    def test_windowMoved_masterWindow_tracksWidth(self, basic_manager):
+        """Master window moved should update tracked width."""
+        basic_manager.windowIds = [100, 200, 300]
+        window = MockCon(id=100, rect=MockRect(width=640))
+        event = MockWindowEvent(change="move", container=window)
+        workspace = MockCon(name="1", type="workspace")
+
+        basic_manager.windowMoved(event, workspace, window)
+
+        assert basic_manager.lastKnownMasterWidth == 640
+
+    def test_windowMoved_stackWindow_doesNotTrackWidth(self, basic_manager):
+        """Stack window movement should not update master width tracking."""
+        basic_manager.windowIds = [100, 200, 300]
+        basic_manager.lastKnownMasterWidth = 600
+        window = MockCon(id=200, rect=MockRect(width=350))
+        event = MockWindowEvent(change="move", container=window)
+        workspace = MockCon(name="1", type="workspace")
+
+        basic_manager.windowMoved(event, workspace, window)
+
+        assert basic_manager.lastKnownMasterWidth == 600
+
+    def test_windowMoved_mouseResize_updatesMasterWidth(self, basic_manager):
+        """User mouse-resize of master should be detected via windowMoved."""
+        basic_manager.windowIds = [100, 200, 300]
+        basic_manager.lastKnownMasterWidth = 600
+
+        # Simulate user dragging master border to new size
+        # (sway emits windowMoved when it detects geometry change)
+        master_after_resize = MockCon(id=100, rect=MockRect(width=750))
+        event = MockWindowEvent(change="move", container=master_after_resize)
+        workspace = MockCon(name="1", type="workspace")
+
+        basic_manager.windowMoved(event, workspace, master_after_resize)
+
+        # Should have learned the new size from windowMoved event
+        assert basic_manager.lastKnownMasterWidth == 750
     """Tests for windowFloating() event handler."""
 
     def test_windowFloating_toFloating_popsAndTracks(self, basic_manager):
