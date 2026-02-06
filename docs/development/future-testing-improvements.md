@@ -5,7 +5,7 @@ This document outlines planned testing improvements for the layman project, orga
 ## Current State
 
 - **226 unit tests** passing
-- **61% overall coverage** (limited by layman.py and __main__.py which require integration tests)
+- **61% overall coverage** (limited by layman.py and **main**.py which require integration tests)
 - Individual module coverage: 80-100% for testable modules
 - CI workflow with GitHub Actions
 - Headless Sway support for integration tests

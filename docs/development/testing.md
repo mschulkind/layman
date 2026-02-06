@@ -294,7 +294,7 @@ For full integration testing with a real window manager:
 
 ### Prerequisites
 
-**Option 1: Headless Sway (Recommended for CI)**
+#### Option 1: Headless Sway (Recommended for CI)
 
 Sway can run in headless mode without a display using wlroots' headless backend:
 
@@ -316,7 +316,7 @@ sway -c /dev/null &
 just test-integration
 ```
 
-**Option 2: Xvfb with i3 (Legacy)**
+#### Option 2: Xvfb with i3 (Legacy)
 
 - Xvfb (virtual X server)
 - i3 window manager
