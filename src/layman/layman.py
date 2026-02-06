@@ -43,6 +43,7 @@ from layman.managers import (
     ThreeColumnLayoutManager,
     WorkspaceLayoutManager,
 )
+from layman.perf import CommandBatcher, EventDebouncer, TreeCache
 from layman.server import MessageServer
 
 logger = get_logger(__name__)
@@ -700,6 +701,11 @@ class Layman:
 
         self.conn = Connection()
         notificationQueue = SimpleQueue()
+
+        # Initialize performance utilities
+        self.commandBatcher = CommandBatcher(self.conn)
+        self.treeCache = TreeCache(self.conn)
+        self.eventDebouncer = EventDebouncer(window_ms=10.0)
 
         # Get pipe path from config (Decision #17)
         pipe_path = self.options.getDefault(config.KEY_PIPE_PATH)
