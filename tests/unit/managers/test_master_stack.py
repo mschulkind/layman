@@ -359,6 +359,29 @@ class TestWindowFocused:
 
         assert basic_manager.lastFocusedWindowId == 100
 
+    def test_windowFocused_masterWindow_tracksWidth(self, basic_manager):
+        """Focusing master should store its width in lastKnownMasterWidth."""
+        basic_manager.windowIds = [100, 200, 300]
+        window = MockCon(id=100, rect=MockRect(width=720))
+        event = MockWindowEvent(change="focus", container=window)
+        workspace = MockCon(name="1", type="workspace")
+
+        basic_manager.windowFocused(event, workspace, window)
+
+        assert basic_manager.lastKnownMasterWidth == 720
+
+    def test_windowFocused_stackWindow_doesNotTrackWidth(self, basic_manager):
+        """Focusing a stack window should not update lastKnownMasterWidth."""
+        basic_manager.windowIds = [100, 200, 300]
+        basic_manager.lastKnownMasterWidth = 720
+        window = MockCon(id=200, rect=MockRect(width=400))
+        event = MockWindowEvent(change="focus", container=window)
+        workspace = MockCon(name="1", type="workspace")
+
+        basic_manager.windowFocused(event, workspace, window)
+
+        assert basic_manager.lastKnownMasterWidth == 720
+
 
 class TestWindowFloating:
     """Tests for windowFloating() event handler."""
@@ -818,18 +841,50 @@ class TestKnownBugs:
         ]
         assert len(resize_commands) > 0, "New master should be resized to old master's width"
 
-    def test_popWindow_zeroWidth_handledGracefully(
-        self, basic_manager, mock_connection, capsys
+    def test_popWindow_zeroWidth_usesLastKnownMasterWidth(
+        self, basic_manager, mock_connection
     ):
-        """Window with width=0 should be handled without crash."""
-        basic_manager.windowIds = [100, 200]
-        # Master has 0 width (edge case)
+        """
+        When master is removed with width=0 (stale data), popWindow should
+        fall back to lastKnownMasterWidth to preserve the master column size.
+
+        Regression test for: docs/roadmap/bugs.md - "Window Width Not Preserved"
+        """
+        basic_manager.windowIds = [100, 200, 300]
+        basic_manager.lastKnownMasterWidth = 720
+        # Master has 0 width (event arrived after window destroyed)
         master = MockCon(id=100, rect=MockRect(width=0))
 
-        # Should not raise
         basic_manager.popWindow(master)
 
-        # Should log a warning
-        captured = capsys.readouterr()
-        # The code has a log for this case
-        assert basic_manager.windowIds == [200]
+        # Should resize new master using lastKnownMasterWidth
+        resize_commands = [
+            cmd for cmd in mock_connection.commands_executed
+            if "resize" in cmd and "720" in cmd
+        ]
+        assert len(resize_commands) > 0, (
+            "New master should be resized to lastKnownMasterWidth when rect.width is 0"
+        )
+
+    def test_popWindow_zeroWidth_noTrackedWidth_usesConfigWidth(
+        self, basic_manager, mock_connection
+    ):
+        """
+        When master is removed with width=0 and no tracked width exists,
+        popWindow should fall back to the configured masterWidth percentage.
+        """
+        basic_manager.windowIds = [100, 200, 300]
+        basic_manager.lastKnownMasterWidth = 0  # Never focused master
+        basic_manager.masterWidth = 60
+        master = MockCon(id=100, rect=MockRect(width=0))
+
+        basic_manager.popWindow(master)
+
+        # Should resize new master using masterWidth percentage
+        resize_commands = [
+            cmd for cmd in mock_connection.commands_executed
+            if "resize" in cmd and "60 ppt" in cmd
+        ]
+        assert len(resize_commands) > 0, (
+            "New master should be resized using masterWidth ppt when no tracked width exists"
+        )

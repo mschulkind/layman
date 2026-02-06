@@ -16,11 +16,10 @@ You should have received a copy of the GNU General Public License along with
 layman. If not, see <https://www.gnu.org/licenses/>.
 """
 
-import json
 import os
 import sys
 
-from . import layman, utils, config
+from . import config, layman, utils
 from .server import DEFAULT_PIPE_PATH
 
 # Decision #16: Help text
@@ -74,8 +73,8 @@ def send_command(command: str, pipe_path: str) -> bool:
         return True
     except FileNotFoundError:
         # Decision #18: Better error message
-        print(f"Error: Layman daemon is not running.", file=sys.stderr)
-        print(f"Start the daemon with: layman", file=sys.stderr)
+        print("Error: Layman daemon is not running.", file=sys.stderr)
+        print("Start the daemon with: layman", file=sys.stderr)
         return False
     except PermissionError:
         print(f"Error: Permission denied accessing {pipe_path}", file=sys.stderr)

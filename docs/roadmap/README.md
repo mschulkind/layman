@@ -6,11 +6,13 @@ This section tracks planned features, known bugs, and improvements for layman.
 
 | File | Description |
 |------|-------------|
+| **[task-list.md](task-list.md)** | **Master task list — all planned work, organized by phase** |
 | [bugs.md](bugs.md) | Known bugs and issues |
 | [features.md](features.md) | Planned new features |
 | [improvements.md](improvements.md) | Codebase improvements |
 | [modernization.md](modernization.md) | Project modernization tasks |
 | [code-simplification.md](code-simplification.md) | Cyclomatic complexity & SOLID refactoring |
+| [command-naming.md](command-naming.md) | Command naming convention proposals |
 | [type-safety.md](type-safety.md) | Type safety and modernization plan |
 | [sway-ipc-optimization.md](sway-ipc-optimization.md) | Sway IPC communication optimization |
 

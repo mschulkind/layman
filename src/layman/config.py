@@ -30,6 +30,7 @@ KEY_PIPE_PATH = "pipePath"
 
 class ConfigError(Exception):
     """Raised when configuration is invalid."""
+
     pass
 
 
