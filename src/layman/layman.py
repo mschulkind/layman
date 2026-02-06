@@ -39,6 +39,7 @@ from layman.managers import (
     AutotilingLayoutManager,
     GridLayoutManager,
     MasterStackLayoutManager,
+    ThreeColumnLayoutManager,
     WorkspaceLayoutManager,
 )
 from layman.server import MessageServer
@@ -93,6 +94,7 @@ class Layman:
             AutotilingLayoutManager,
             MasterStackLayoutManager,
             GridLayoutManager,
+            ThreeColumnLayoutManager,
         ]:
             self.builtinLayouts[builtin_layout.shortName] = builtin_layout
 
