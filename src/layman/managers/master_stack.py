@@ -16,13 +16,12 @@ You should have received a copy of the GNU General Public License along with
 layman. If not, see <https://www.gnu.org/licenses/>.
 """
 
-import pprint
 from enum import Enum
 from typing import TypeVar
 
 from i3ipc import Con
 
-from layman.config import LaymanConfig, ConfigError
+from layman.config import ConfigError, LaymanConfig
 from layman.managers.workspace import WorkspaceLayoutManager
 
 KEY_MASTER_WIDTH = "masterWidth"
@@ -102,7 +101,7 @@ class MasterStackLayoutManager(WorkspaceLayoutManager):
             valid_options = [e.name.lower() for e in enum_class]
             raise ConfigError(
                 f"Invalid {key} '{value}'. Valid options: {', '.join(valid_options)}"
-            )
+            ) from None
         return None
 
     def __init__(self, con, workspace, workspaceName, options):
@@ -113,13 +112,16 @@ class MasterStackLayoutManager(WorkspaceLayoutManager):
         self.lastFocusedWindowId = None
         self.maximized = False
         self.masterWidthBeforeMaximize = 0
+        self.lastKnownMasterWidth = 0
 
         # Decision #10: Accept int or float, reject 0 and 100
         self.masterWidth = 50
         masterWidth = options.getForWorkspace(workspaceName, KEY_MASTER_WIDTH)
         if masterWidth is not None:
             if isinstance(masterWidth, (int, float)) and 0 < masterWidth < 100:
-                self.masterWidth = int(masterWidth) if isinstance(masterWidth, float) else masterWidth
+                self.masterWidth = (
+                    int(masterWidth) if isinstance(masterWidth, float) else masterWidth
+                )
             else:
                 raise ConfigError(
                     f"Invalid masterWidth '{masterWidth}'. Must be a number between 0 and 100 exclusive."
@@ -179,6 +181,10 @@ class MasterStackLayoutManager(WorkspaceLayoutManager):
             return
 
         self.lastFocusedWindowId = window.id
+
+        # Track master width proactively so we have it when master is removed
+        if self.windowIds and window.id == self.windowIds[0]:
+            self.lastKnownMasterWidth = window.rect.width
 
     def windowFloating(self, event, workspace, window):
         if self.isFloating(window):
@@ -409,14 +415,18 @@ class MasterStackLayoutManager(WorkspaceLayoutManager):
             # added a master back, and now that master is at default 50% width, so we need to resize
             # it to the width of the previous master.
             if len(self.windowIds) > 1:
-                if window.rect.width == 0:
-                    # Not sure why width would ever be 0, but I've seen this. Smells a lot like a
-                    # bug somewhere.
-                    self.log("window with width 0 popped. likely a bug.")
-                    self.log(pprint.pformat(window.__dict__))
-                else:
+                if window.rect.width > 0:
                     self.command(
                         f"[con_id={self.windowIds[0]}] resize set width {window.rect.width} px"
+                    )
+                elif self.lastKnownMasterWidth > 0:
+                    self.command(
+                        f"[con_id={self.windowIds[0]}] resize set width {self.lastKnownMasterWidth} px"
+                    )
+                else:
+                    # No tracked width available, fall back to configured percentage
+                    self.command(
+                        f"[con_id={self.windowIds[0]}] resize set width {self.masterWidth} ppt"
                     )
 
         if self.substackExists:
@@ -571,7 +581,10 @@ class MasterStackLayoutManager(WorkspaceLayoutManager):
             )
 
         if self.substackExists and not substackRebalanced:
-            if sourceIndex >= self.visibleStackLimit and targetIndex < self.visibleStackLimit:
+            if (
+                sourceIndex >= self.visibleStackLimit
+                and targetIndex < self.visibleStackLimit
+            ):
                 # A substack window is being moved out of the substack, so we need to demote a
                 # window to refill the substack.
                 lastVisibleStack = self.windowIds[self.visibleStackLimit - 1]
@@ -581,7 +594,10 @@ class MasterStackLayoutManager(WorkspaceLayoutManager):
                 self.moveWindowCommand(lastVisibleStack, firstSubstack)
                 self.swapWindowsCommand(lastVisibleStack, firstSubstack)
 
-            if sourceIndex < self.visibleStackLimit and targetIndex >= self.visibleStackLimit:
+            if (
+                sourceIndex < self.visibleStackLimit
+                and targetIndex >= self.visibleStackLimit
+            ):
                 # A non-substack-window was added to the substack, so we need to promote a window
                 # from the substack to refill the visible stack.
                 lastVisibleStack = self.windowIds[self.visibleStackLimit - 1]

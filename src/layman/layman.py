@@ -498,7 +498,9 @@ class Layman:
                 )
             else:
                 # Decision #3: Raise exception on unknown layout
-                available = list(self.builtinLayouts.keys()) + list(self.userLayouts.keys())
+                available = list(self.builtinLayouts.keys()) + list(
+                    self.userLayouts.keys()
+                )
                 raise ConfigError(
                     f"Unknown layout '{layoutName}' for workspace {workspaceName}. "
                     f"Available layouts: {', '.join(available)}"

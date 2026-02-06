@@ -2,12 +2,11 @@
 [layman]
 defaultLayout = "MasterStack"
 debug = false
-excludeWorkspaces = []
-excludeOutputs = []
+excludedWorkspaces = []
 masterWidth = 60
 stackLayout = "splitv"
 stackSide = "right"
-depthLimit = 0
+visibleStackLimit = 3
 
 [workspace.1]
 defaultLayout = "MasterStack"

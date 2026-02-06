@@ -49,24 +49,6 @@ def windowFocused(self, event, workspace, window):
     self.focusHistory.append(window.id)
 ```
 
-### Scratchpad Integration
-
-**Status:** 📋 Planned
-
-Better integration with sway's scratchpad for temporary windows.
-
-### Per-Output Configuration
-
-**Status:** 📋 Planned
-
-Re-enable output-based configuration (currently disabled in code).
-
-```toml
-[output.HDMI-A-1]
-defaultLayout = "MasterStack"
-masterWidth = 40
-```
-
 ---
 
 ## Lower Priority
@@ -94,30 +76,21 @@ Apply rules based on window class/title.
 "code" = { workspace = "coding" }
 ```
 
-### Dynamic Master Count
+### Multi-Master
 
 **Status:** 📋 Planned
 
-Support multiple master windows (like dwm's nmaster).
+Support multiple master windows in MasterStack. Masters split the master column vertically — with 2 masters, one on top and one on bottom; additional masters stack the same way.
 
 ```
-┌────────┬────────┬─────────┐
-│ Master │ Master │ Stack 1 │
-│   1    │   2    ├─────────┤
-│        │        │ Stack 2 │
-└────────┴────────┴─────────┘
+1 master (default):           2 masters:                    3 masters:
+┌─────────┬──────────┐        ┌─────────┬──────────┐        ┌─────────┬──────────┐
+│         │ Stack 1  │        │ Master1 │ Stack 1  │        │ Master1 │ Stack 1  │
+│ Master  ├──────────┤        ├─────────┤──────────┤        ├─────────┤──────────┤
+│         │ Stack 2  │        │ Master2 │ Stack 2  │        │ Master2 │ Stack 2  │
+│         ├──────────┤        │         ├──────────┤        ├─────────┤──────────┤
+│         │ Stack 3  │        │         │ Stack 3  │        │ Master3 │ Stack 3  │
+└─────────┴──────────┘        └─────────┴──────────┘        └─────────┴──────────┘
 ```
 
-### Gaps Support
-
-**Status:** 📋 Planned
-
-Add configurable gaps between windows.
-
-```toml
-[layman]
-innerGaps = 5
-outerGaps = 10
-```
-
-Note: Sway already supports gaps natively, but layout-specific gaps could be useful.
+Config: `masterCount` (int, default 1). Commands: `master add`, `master remove`.

@@ -70,28 +70,28 @@ format-python:
 
 # Run all unit tests
 test:
-    uv run pytest tests/unit -v
+    uv run python -m pytest tests/unit -v
 
 # Run tests with fast fail (stop on first failure)
 test-fast:
-    uv run pytest tests/unit -v -x
+    uv run python -m pytest tests/unit -v -x
 
 # Run tests with verbose output (show print statements)
 test-verbose:
-    uv run pytest tests/unit -vvv -s
+    uv run python -m pytest tests/unit -vvv -s
 
 # Run tests with coverage report
 test-cov:
-    uv run pytest tests/unit -v --cov --cov-report=term-missing
+    uv run python -m pytest tests/unit -v --cov --cov-report=term-missing
 
 # Run tests with HTML coverage report
 test-cov-html:
-    uv run pytest tests/unit -v --cov --cov-report=html
+    uv run python -m pytest tests/unit -v --cov --cov-report=html
     @echo "Coverage report: htmlcov/index.html"
 
 # Run integration tests (requires running Sway/i3)
 test-integration:
-    uv run pytest tests/integration -v -m integration
+    uv run python -m pytest tests/integration -v -m integration
 
 # Run integration tests with headless Sway
 test-integration-headless:
@@ -110,7 +110,7 @@ test-integration-headless:
     sleep 2
     
     # Run tests
-    uv run pytest tests/integration -v -m integration || true
+    uv run python -m pytest tests/integration -v -m integration || true
     
     # Cleanup
     kill $SWAY_PID 2>/dev/null || true
@@ -118,19 +118,19 @@ test-integration-headless:
 
 # Run all tests (unit + integration if Sway available)
 test-all:
-    uv run pytest tests/ -v
+    uv run python -m pytest tests/ -v
 
 # Run a specific test file
 test-file FILE:
-    uv run pytest {{FILE}} -v
+    uv run python -m pytest {{FILE}} -v
 
 # Run tests matching a pattern
 test-match PATTERN:
-    uv run pytest tests/unit -v -k "{{PATTERN}}"
+    uv run python -m pytest tests/unit -v -k "{{PATTERN}}"
 
 # Run tests and drop into debugger on failure
 test-debug:
-    uv run pytest tests/unit -v --pdb --pdb-first
+    uv run python -m pytest tests/unit -v --pdb --pdb-first
 
 # ============== Setup ==============
 
