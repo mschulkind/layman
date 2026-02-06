@@ -1,0 +1,8 @@
+# ty (Python type checker) configuration
+# https://docs.astral.sh/ty/
+
+[rules]
+# All current unresolved-attribute errors come from i3ipc.Con and
+# i3ipc.CommandReply, which don't ship type stubs (no py.typed marker).
+# Downgrade to warning until i3ipc adds proper type annotations.
+unresolved-attribute = "warn"
