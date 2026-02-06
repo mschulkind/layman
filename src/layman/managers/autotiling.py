@@ -30,30 +30,6 @@ class AutotilingLayoutManager(WorkspaceLayoutManager):
         super().__init__(con, workspace, workspaceName, options)
         self.depthLimit = options.getForWorkspace(workspaceName, KEY_DEPTH_LIMIT) or 0
 
-    def isExcluded(self, window):
-        if window is None:
-            return True
-
-        if window.type != "con":
-            return True
-
-        if window.workspace() is None:
-            return True
-
-        if window.floating is not None and "on" in window.floating:
-            return True
-
-        if window.fullscreen_mode == 1:
-            return True
-
-        if window.parent.layout == "stacked":
-            return True
-
-        if window.parent.layout == "tabbed":
-            return True
-
-        return False
-
     def switchSplit(self, window):
         if self.isExcluded(window):
             return

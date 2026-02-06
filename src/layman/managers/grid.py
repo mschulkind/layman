@@ -23,30 +23,6 @@ from layman.managers.workspace import WorkspaceLayoutManager
 class GridLayoutManager(WorkspaceLayoutManager):
     shortName = "Grid"
 
-    def isExcluded(self, window):
-        if window is None:
-            return True
-
-        if window.type != "con":
-            return True
-
-        if window.workspace() is None:
-            return True
-
-        if window.floating is not None and "on" in window.floating:
-            return True
-
-        if window.fullscreen_mode == 1:
-            return True
-
-        if window.parent.layout == "stacked":
-            return True
-
-        if window.parent.layout == "tabbed":
-            return True
-
-        return False
-
     def switchSplit(self, window):
         newLayout = "splitv" if window.rect.height > window.rect.width else "splith"
         result = self.con.command(("[con_id=%d]" % window.id) + newLayout)

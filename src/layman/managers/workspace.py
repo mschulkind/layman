@@ -106,6 +106,33 @@ class WorkspaceLayoutManager:
     def onCommand(self, command: str, workspace: i3ipc.Con):
         pass
 
+    # isExcluded checks if a window should be skipped by layout logic.
+    # Returns True for None windows, non-con types, floating, fullscreen,
+    # and windows in stacked/tabbed containers.
+    def isExcluded(self, window: i3ipc.Con | None) -> bool:
+        if window is None:
+            return True
+
+        if window.type != "con":
+            return True
+
+        if window.workspace() is None:
+            return True
+
+        if window.floating is not None and "on" in window.floating:
+            return True
+
+        if window.fullscreen_mode == 1:
+            return True
+
+        if window.parent.layout == "stacked":
+            return True
+
+        if window.parent.layout == "tabbed":
+            return True
+
+        return False
+
     # command is used by the layout manager itself to run commands.
     def command(self, command: str):
         self.logCaller(f"Running command: {command}")
