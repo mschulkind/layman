@@ -217,22 +217,22 @@ emacs = ["code", "vscode"]
 ## Commands
 
 ```
-layman layout TabbedPairs     # Activate layout
+layman layout set TabbedPairs     # Activate layout
 layman pair                   # Manually pair focused with next created
 layman unpair                 # Break current pair
-layman focus up               # Focus other window in pair (Mod+k)
-layman focus down             # Focus other window in pair (Mod+j)
-layman focus left             # Focus previous pair (Mod+h)
-layman focus right            # Focus next pair (Mod+l)
+layman window focus up               # Focus other window in pair (Mod+k)
+layman window focus down             # Focus other window in pair (Mod+j)
+layman window focus left             # Focus previous pair (Mod+h)
+layman window focus right            # Focus next pair (Mod+l)
 ```
 
 ## Keybindings
 
 ```
-bindsym $mod+h nop layman focus left
-bindsym $mod+j nop layman focus down
-bindsym $mod+k nop layman focus up
-bindsym $mod+l nop layman focus right
+bindsym $mod+h nop layman window focus left
+bindsym $mod+j nop layman window focus down
+bindsym $mod+k nop layman window focus up
+bindsym $mod+l nop layman window focus right
 bindsym $mod+p nop layman pair
 bindsym $mod+Shift+p nop layman unpair
 ```

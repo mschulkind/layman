@@ -89,13 +89,13 @@ Windows 5+ → Left stack
 ## Commands
 
 ```
-layman layout ThreeColumn        # Activate layout
-layman move left                 # Move window to left column
-layman move right                # Move window to right column
-layman move to master            # Move window to master
-layman swap master               # Swap with master
-layman focus left                # Focus left column
-layman focus right               # Focus right column
+layman layout set ThreeColumn        # Activate layout
+layman window move left                 # Move window to left column
+layman window move right                # Move window to right column
+layman window move to master            # Move window to master
+layman window swap master               # Swap with master
+layman window focus left                # Focus left column
+layman window focus right               # Focus right column
 layman balance                   # Rebalance stacks
 ```
 

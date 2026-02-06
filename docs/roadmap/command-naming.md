@@ -8,29 +8,29 @@ Current commands have inconsistent naming patterns:
 
 | Command | Style | Notes |
 |---------|-------|-------|
-| `move up` | verb + direction | |
-| `move down` | verb + direction | |
-| `move left` | verb + direction | |
-| `move right` | verb + direction | |
-| `move to master` | verb + preposition + noun | |
-| `move to index <n>` | verb + preposition + noun + arg | |
-| `focus up` | verb + direction | |
-| `focus down` | verb + direction | |
-| `focus master` | verb + noun | |
+| `window move up` | verb + direction | |
+| `window move down` | verb + direction | |
+| `window move left` | verb + direction | |
+| `window move right` | verb + direction | |
+| `window move to master` | verb + preposition + noun | |
+| `window move to index <n>` | verb + preposition + noun + arg | |
+| `window focus up` | verb + direction | |
+| `window focus down` | verb + direction | |
+| `window focus master` | verb + noun | |
 | `stack toggle` | noun + verb | **Inconsistent** |
-| `stackside toggle` | noun + verb | **Inconsistent** |
-| `swap master` | verb + noun | |
-| `rotate cw` | verb + abbreviation | |
-| `rotate ccw` | verb + abbreviation | |
-| `maximize` | verb only | |
+| `stack side toggle` | noun + verb | **Inconsistent** |
+| `window swap master` | verb + noun | |
+| `window rotate cw` | verb + abbreviation | |
+| `window rotate ccw` | verb + abbreviation | |
+| `layout maximize` | verb only | |
 | `reload` | verb only | |
-| `layout <name>` | noun + arg | **Inconsistent** |
+| `layout set <name>` | noun + arg | **Inconsistent** |
 | `help` | noun only | |
 | `status` | noun only | |
 
 ## Problems
 
-1. **Verb position inconsistent**: Most commands are verb-first, but `stack toggle` and `stackside toggle` are noun-first
+1. **Verb position inconsistent**: Most commands are verb-first, but `stack toggle` and `stack side toggle` are noun-first
 2. **layout command** is noun-first unlike movement commands
 3. **No clear hierarchy**: Commands don't group logically
 
