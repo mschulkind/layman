@@ -16,12 +16,12 @@ You should have received a copy of the GNU General Public License along with
 layman. If not, see <https://www.gnu.org/licenses/>.
 """
 
-import inspect
 from typing import ClassVar
 
 import i3ipc
 
-from layman.config import KEY_DEBUG, LaymanConfig
+from layman.config import LaymanConfig
+from layman.log import get_logger
 
 
 class WorkspaceLayoutManager:
@@ -61,7 +61,9 @@ class WorkspaceLayoutManager:
     ):
         self.con = con
         self.workspaceName = workspaceName
-        self.debug = options.getForWorkspace(workspaceName, KEY_DEBUG)
+        # Each layout manager instance gets a logger named for its module + workspace
+        module = type(self).__module__ or "layman.managers"
+        self.logger = get_logger(f"{module}.{workspaceName}")
 
     # windowAdded is called when a new window is added to the workspace,
     # either by being created on the workspace or moved to it from another.
@@ -135,37 +137,22 @@ class WorkspaceLayoutManager:
 
     # command is used by the layout manager itself to run commands.
     def command(self, command: str):
-        self.logCaller(f"Running command: {command}")
+        self.logger.debug("Running command: %s", command, stacklevel=2)
         results = self.con.command(command)
         for result in results:
             if result.success:
-                self.logCaller("Command succeeded.")
+                self.logger.debug("Command succeeded.", stacklevel=2)
             else:
-                self.logCaller(f"Command failed: {result.error}")
+                self.logger.error("Command failed: %s", result.error, stacklevel=2)
 
-    # This log function includes the class name, workspace number, and the
-    # name of the function it is called by. This makes it useful for functions
-    # that are called in response to events.
-    def log(self, msg):
-        if self.debug:
-            print(
-                "%s %s: %s: %s"
-                % (self.shortName, self.workspaceName, inspect.stack()[1][3], msg)
-            )
+    def log(self, msg: str) -> None:
+        """Log a debug message. Includes caller function name via logging format."""
+        self.logger.debug(msg, stacklevel=2)
 
-    # Same as log(), but prints in non-debug as well.
-    def logError(self, msg):
-        print(
-            "%s %s: %s: %s"
-            % (self.shortName, self.workspaceName, inspect.stack()[1][3], msg)
-        )
+    def logError(self, msg: str) -> None:
+        """Log an error message (always visible)."""
+        self.logger.error(msg, stacklevel=2)
 
-    # This log function includes the class name, workspace number, and the
-    # name of the function 2 calls up. This makes it useful for helper
-    # functions that get called by event handlers
-    def logCaller(self, msg):
-        if self.debug:
-            print(
-                "%s %s: %s: %s"
-                % (self.shortName, self.workspaceName, inspect.stack()[2][3], msg)
-            )
+    def logCaller(self, msg: str) -> None:
+        """Log a debug message from a helper (shows grandparent caller)."""
+        self.logger.debug(msg, stacklevel=3)

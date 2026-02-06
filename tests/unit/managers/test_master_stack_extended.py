@@ -5,6 +5,8 @@ These tests cover additional edge cases, error paths, and complex operations
 to increase coverage.
 """
 
+import logging
+
 import pytest
 
 from layman.managers.master_stack import (
@@ -256,19 +258,20 @@ class TestToggleOperationsExtended:
 class TestMoveWindowToIndexExtended:
     """Extended tests for moveWindowToIndex."""
 
-    def test_moveWindowToIndex_oneWindow_noop(self, mock_connection, minimal_config, capsys):
+    def test_moveWindowToIndex_oneWindow_noop(
+        self, mock_connection, minimal_config, caplog
+    ):
         """Moving with only 1 window should log and return."""
         workspace = MockCon(name="1", type="workspace")
         manager = MasterStackLayoutManager(mock_connection, workspace, "1", minimal_config)
         manager.windowIds = [100]
-        manager.debug = True
 
         mock_connection.clear_commands()
         window = MockCon(id=100)
-        manager.moveWindowToIndex(window, 0)
+        with caplog.at_level(logging.DEBUG, logger=manager.logger.name):
+            manager.moveWindowToIndex(window, 0)
 
-        captured = capsys.readouterr()
-        assert "not enough" in captured.out.lower()
+        assert "not enough" in caplog.text.lower()
 
 
 class TestMoveWindowRelativeExtended:
@@ -521,12 +524,11 @@ class TestOnCommandExtended:
         # Window 200 should now be at index 0
         assert manager.windowIds[0] == 200
 
-    def test_onCommand_moveToIndex_invalid(self, manager_with_focus, mock_connection, capsys):
+    def test_onCommand_moveToIndex_invalid(self, manager_with_focus, mock_connection, caplog):
         """'move to index X' with non-integer should log usage."""
         manager, workspace = manager_with_focus
-        manager.debug = True
 
-        manager.onCommand("move to index abc", workspace)
+        with caplog.at_level(logging.DEBUG, logger=manager.logger.name):
+            manager.onCommand("move to index abc", workspace)
 
-        captured = capsys.readouterr()
-        assert "Usage" in captured.out
+        assert "Usage" in caplog.text

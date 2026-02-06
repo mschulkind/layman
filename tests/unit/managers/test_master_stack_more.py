@@ -4,6 +4,8 @@ More extended tests for MasterStack to improve coverage.
 Focus on uncovered lines: maximize, horizontal movement, complex operations.
 """
 
+import logging
+
 import pytest
 
 from layman.managers.master_stack import (
@@ -225,20 +227,19 @@ class TestPopWindowExtended:
         assert 200 not in manager.windowIds
 
     def test_popWindow_windowNotFound_logsWarning(
-        self, mock_connection, minimal_config, capsys
+        self, mock_connection, minimal_config, caplog
     ):
         """Popping unknown window should log warning."""
         workspace = MockCon(name="1", type="workspace")
         manager = MasterStackLayoutManager(mock_connection, workspace, "1", minimal_config)
         manager.windowIds = [100, 200]
-        manager.debug = True
 
         window = MockCon(id=999, type="con")
 
-        manager.popWindow(window)
+        with caplog.at_level(logging.DEBUG, logger=manager.logger.name):
+            manager.popWindow(window)
 
-        captured = capsys.readouterr()
-        assert "not found" in captured.out.lower() or "bug" in captured.out.lower()
+        assert "not found" in caplog.text.lower() or "bug" in caplog.text.lower()
 
 
 # =============================================================================

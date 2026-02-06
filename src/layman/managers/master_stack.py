@@ -200,9 +200,7 @@ class MasterStackLayoutManager(WorkspaceLayoutManager):
         if self.windowIds and window.id == self.windowIds[0]:
             old_width = self.lastKnownMasterWidth
             self.lastKnownMasterWidth = window.rect.width
-            self.log(
-                f"Master moved/resized: {old_width}px → {window.rect.width}px"
-            )
+            self.log(f"Master moved/resized: {old_width}px → {window.rect.width}px")
 
     def windowFloating(self, event, workspace, window):
         if self.isFloating(window):

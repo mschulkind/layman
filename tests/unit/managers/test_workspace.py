@@ -8,6 +8,8 @@ Tests the WorkspaceLayoutManager base class for:
 - Logging functionality
 """
 
+import logging
+
 import pytest
 from unittest.mock import Mock, patch
 
@@ -37,25 +39,25 @@ class TestWorkspaceLayoutManagerInit:
 
         assert manager.workspaceName == "test"
 
-    def test_init_setsDebugFromConfig(self, mock_connection, valid_config):
-        """Should set debug flag from config."""
+    def test_init_hasLogger(self, mock_connection, valid_config):
+        """Should set up a logger attribute."""
         workspace = MockCon(name="1", type="workspace")
 
         manager = WorkspaceLayoutManager(
             mock_connection, workspace, "1", valid_config
         )
 
-        assert manager.debug is True
+        assert hasattr(manager, "logger")
+        assert "1" in manager.logger.name
 
-    def test_init_debugFalseByDefault(self, mock_connection, minimal_config):
-        """Debug should be False when not set in config."""
-        workspace = MockCon(name="1", type="workspace")
+    def test_init_loggerPerWorkspace(self, mock_connection, minimal_config):
+        """Different workspaces should get different loggers."""
+        m1 = WorkspaceLayoutManager(mock_connection, None, "1", minimal_config)
+        m2 = WorkspaceLayoutManager(mock_connection, None, "2", minimal_config)
 
-        manager = WorkspaceLayoutManager(
-            mock_connection, workspace, "1", minimal_config
-        )
-
-        assert manager.debug is False
+        assert m1.logger.name != m2.logger.name
+        assert "1" in m1.logger.name
+        assert "2" in m2.logger.name
 
 
 class TestWorkspaceLayoutManagerClassAttributes:
@@ -178,44 +180,43 @@ class TestWorkspaceLayoutManagerEventHandlers:
 class TestWorkspaceLayoutManagerLogging:
     """Tests for logging methods."""
 
-    def test_log_debugTrue_prints(self, mock_connection, valid_config, capsys):
-        """log() should print when debug is True."""
-        manager = WorkspaceLayoutManager(mock_connection, None, "1", valid_config)
-        assert manager.debug is True
-
-        manager.log("test message")
-
-        captured = capsys.readouterr()
-        assert "test message" in captured.out
-
-    def test_log_debugFalse_noPrint(self, mock_connection, minimal_config, capsys):
-        """log() should not print when debug is False."""
-        manager = WorkspaceLayoutManager(mock_connection, None, "1", minimal_config)
-        assert manager.debug is False
-
-        manager.log("test message")
-
-        captured = capsys.readouterr()
-        assert "test message" not in captured.out
-
-    def test_logError_alwaysPrints(self, mock_connection, minimal_config, capsys):
-        """logError() should print regardless of debug setting."""
-        manager = WorkspaceLayoutManager(mock_connection, None, "1", minimal_config)
-        assert manager.debug is False
-
-        manager.logError("error message")
-
-        captured = capsys.readouterr()
-        assert "error message" in captured.out
-
-    def test_logCaller_debugTrue_prints(self, mock_connection, valid_config, capsys):
-        """logCaller() should print when debug is True."""
+    def test_log_emitsDebugMessage(self, mock_connection, valid_config, caplog):
+        """log() should emit a DEBUG level message."""
         manager = WorkspaceLayoutManager(mock_connection, None, "1", valid_config)
 
-        manager.logCaller("caller message")
+        with caplog.at_level(logging.DEBUG, logger=manager.logger.name):
+            manager.log("test message")
 
-        captured = capsys.readouterr()
-        assert "caller message" in captured.out
+        assert "test message" in caplog.text
+
+    def test_log_belowLevel_suppressed(self, mock_connection, minimal_config, caplog):
+        """log() messages should be suppressed when logger level is above DEBUG."""
+        manager = WorkspaceLayoutManager(mock_connection, None, "1", minimal_config)
+        manager.logger.setLevel(logging.WARNING)
+
+        with caplog.at_level(logging.WARNING, logger=manager.logger.name):
+            manager.log("test message")
+
+        assert "test message" not in caplog.text
+
+    def test_logError_emitsErrorMessage(self, mock_connection, minimal_config, caplog):
+        """logError() should emit an ERROR level message."""
+        manager = WorkspaceLayoutManager(mock_connection, None, "1", minimal_config)
+
+        with caplog.at_level(logging.DEBUG, logger=manager.logger.name):
+            manager.logError("error message")
+
+        assert "error message" in caplog.text
+        assert any(r.levelno == logging.ERROR for r in caplog.records)
+
+    def test_logCaller_emitsDebugMessage(self, mock_connection, valid_config, caplog):
+        """logCaller() should emit a DEBUG level message."""
+        manager = WorkspaceLayoutManager(mock_connection, None, "1", valid_config)
+
+        with caplog.at_level(logging.DEBUG, logger=manager.logger.name):
+            manager.logCaller("caller message")
+
+        assert "caller message" in caplog.text
 
 
 class TestIsExcluded:
