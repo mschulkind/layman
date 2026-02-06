@@ -37,8 +37,8 @@ These are resolved per [decisions.md](../decisions.md) and the current codebase:
 
 | # | Task | Status | Source |
 |---|------|--------|--------|
-| 1 | Fix master width not preserved on window removal | ⬜ | [bugs.md](bugs.md) |
-| 2 | Fix existing windows sometimes missed during arrange | ⬜ | [bugs.md](bugs.md) |
+| 1 | Fix master width not preserved on window removal | ✅ | [bugs.md](bugs.md) |
+| 2 | Fix existing windows sometimes missed during arrange | ✅ | [bugs.md](bugs.md) |
 
 ### 1. Master width not preserved on window removal
 
@@ -58,10 +58,10 @@ These are resolved per [decisions.md](../decisions.md) and the current codebase:
 
 | # | Task | Status | Source |
 |---|------|--------|--------|
-| 3 | Extract `isExcluded()` to base class | ⬜ | [code-simplification.md](code-simplification.md) |
-| 4 | Command dispatch table for `onCommand` | ⬜ | [code-simplification.md](code-simplification.md) |
-| 5 | Break up `moveWindowToIndex` (CC=27) | ⬜ | [code-simplification.md](code-simplification.md) |
-| 6 | Break up `moveWindowHorizontally` (CC=21) | ⬜ | [code-simplification.md](code-simplification.md) |
+| 3 | Extract `isExcluded()` to base class | ✅ | [code-simplification.md](code-simplification.md) |
+| 4 | Command dispatch table for `onCommand` | ✅ | [code-simplification.md](code-simplification.md) |
+| 5 | Break up `moveWindowToIndex` (CC=27) | ✅ | [code-simplification.md](code-simplification.md) |
+| 6 | Break up `moveWindowHorizontally` (CC=21) | ✅ | [code-simplification.md](code-simplification.md) |
 | 7 | Resolve `ty` type errors (core + utils) | ⬜ | [type-safety.md](type-safety.md) |
 | 8 | Full type annotations on base `WorkspaceLayoutManager` | ⬜ | [type-safety.md](type-safety.md) |
 | 9 | Fix minor bugs: focus race condition, inconsistent logging | ⬜ | [bugs.md](bugs.md) |
