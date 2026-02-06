@@ -186,6 +186,20 @@ class MasterStackLayoutManager(WorkspaceLayoutManager):
         if self.windowIds and window.id == self.windowIds[0]:
             self.lastKnownMasterWidth = window.rect.width
 
+    def windowMoved(self, event, workspace, window):
+        """Called when a window's position or size changes.
+
+        This catches both programmatic resizes (from our commands) and
+        user-initiated resizes (mouse drag). Update master width tracking
+        to learn about user mouse-resizes we wouldn't otherwise know about.
+        """
+        if self.isFloating(window):
+            return
+
+        # Track master width on any size change, not just focus
+        if self.windowIds and window.id == self.windowIds[0]:
+            self.lastKnownMasterWidth = window.rect.width
+
     def windowFloating(self, event, workspace, window):
         if self.isFloating(window):
             self.log(f"Transitioning window id {window.id} to floating.")
