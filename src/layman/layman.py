@@ -39,6 +39,7 @@ from layman.managers import (
     AutotilingLayoutManager,
     GridLayoutManager,
     MasterStackLayoutManager,
+    TabbedPairsLayoutManager,
     ThreeColumnLayoutManager,
     WorkspaceLayoutManager,
 )
@@ -99,6 +100,7 @@ class Layman:
             MasterStackLayoutManager,
             GridLayoutManager,
             ThreeColumnLayoutManager,
+            TabbedPairsLayoutManager,
         ]:
             self.builtinLayouts[builtin_layout.shortName] = builtin_layout
 
