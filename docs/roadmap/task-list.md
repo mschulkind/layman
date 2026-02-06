@@ -10,14 +10,14 @@ This is the master task list for all planned work on layman, organized by phase 
 | 1 | Critical Bugs | 2 | 2 | ✅ Complete |
 | 2 | Code Quality & Refactoring | 8 | 8 | ✅ Complete |
 | 3 | Command Naming & UX | 2 | 2 | ✅ Complete |
-| 4 | New Layout: Three-Column | 4 | 0 | ⬜ Not started |
-| 5 | Fake Fullscreen (Global) | 2 | 0 | ⬜ Not started |
-| 6 | Tabbed Pairs | 3 | 0 | ⬜ Not started |
-| 7 | Performance | 3 | 0 | ⬜ Not started |
-| 8 | Session Restore | 4 | 0 | ⬜ Not started |
-| 9 | Multi-Master | 3 | 0 | ⬜ Not started |
-| 10 | Polish & Lower Priority | 8 | 0 | ⬜ Not started |
-| | **Total** | **52** | **25** | **48% complete** |
+| 4 | New Layout: Three-Column | 4 | 4 | ✅ Complete |
+| 5 | Fake Fullscreen (Global) | 2 | 2 | ✅ Complete |
+| 6 | Tabbed Pairs | 3 | 3 | ✅ Complete |
+| 7 | Performance | 3 | 3 | ✅ Complete |
+| 8 | Session Restore | 4 | 4 | ✅ Complete |
+| 9 | Multi-Master | 3 | 3 | ✅ Complete |
+| 10 | Polish & Lower Priority | 8 | 8 | ✅ Complete |
+| | **Total** | **52** | **52** | **100% complete** |
 
 ## Status Legend
 
@@ -167,12 +167,12 @@ Old forms will be removed (breaking change).
 
 ---
 
-## Phase 4 — New Layout: Three-Column
+## Phase 4 — New Layout: Three-Column ✅
 
-- [ ] **12.** Implement `ThreeColumnLayoutManager` — [three-column.md](three-column.md)
-- [ ] **13.** Three-column commands — [three-column.md](three-column.md)
-- [ ] **14.** Three-column edge cases — [three-column.md](three-column.md)
-- [ ] **15.** Config options & docs for ThreeColumn — [three-column.md](three-column.md)
+- [x] **12.** Implement `ThreeColumnLayoutManager` — [three-column.md](three-column.md)
+- [x] **13.** Three-column commands — [three-column.md](three-column.md)
+- [x] **14.** Three-column edge cases — [three-column.md](three-column.md)
+- [x] **15.** Config options & docs for ThreeColumn — [three-column.md](three-column.md)
 
 ### 12. Core implementation
 
@@ -194,30 +194,30 @@ Add to config reference, create layout doc, update README.
 
 ---
 
-## Phase 5 — Fake Fullscreen (Global)
+## Phase 5 — Fake Fullscreen (Global) ✅
 
-- [ ] **16.** Generalize fake fullscreen beyond MasterStack — [fake-fullscreen.md](fake-fullscreen.md)
-- [ ] **17.** Handle edge cases — [fake-fullscreen.md](fake-fullscreen.md)
+- [x] **16.** Generalize fake fullscreen beyond MasterStack — [fake-fullscreen.md](fake-fullscreen.md)
+- [x] **17.** Handle edge cases — [fake-fullscreen.md](fake-fullscreen.md)
 
 **Decision:** Tabbed strategy only — no config option needed. MasterStack already has `maximize` (converts to tabbed). This phase makes it a workspace-level feature that works with any layout.
 
 ---
 
-## Phase 6 — Tabbed Pairs
+## Phase 6 — Tabbed Pairs ✅
 
-- [ ] **19.** Implement `TabbedPairsLayoutManager` — [tabbed-pairs.md](tabbed-pairs.md)
-- [ ] **20.** Pair commands and navigation — [tabbed-pairs.md](tabbed-pairs.md)
-- [ ] **21.** Pairing rules config — [tabbed-pairs.md](tabbed-pairs.md)
+- [x] **19.** Implement `TabbedPairsLayoutManager` — [tabbed-pairs.md](tabbed-pairs.md)
+- [x] **20.** Pair commands and navigation — [tabbed-pairs.md](tabbed-pairs.md)
+- [x] **21.** Pairing rules config — [tabbed-pairs.md](tabbed-pairs.md)
 
 Auto-pair windows by `app_id` (e.g., nvim + vscode). Navigate between pairs with `focus left/right`, within pairs with `focus up/down`. Manual `pair`/`unpair` commands.
 
 ---
 
-## Phase 7 — Performance
+## Phase 7 — Performance ✅
 
-- [ ] **22.** Command batching — [sway-ipc-optimization.md](sway-ipc-optimization.md)
-- [ ] **23.** Tree cache for workspace lookup — [sway-ipc-optimization.md](sway-ipc-optimization.md)
-- [ ] **24.** Event debouncing — [sway-ipc-optimization.md](sway-ipc-optimization.md)
+- [x] **22.** Command batching — [sway-ipc-optimization.md](sway-ipc-optimization.md)
+- [x] **23.** Tree cache for workspace lookup — [sway-ipc-optimization.md](sway-ipc-optimization.md)
+- [x] **24.** Event debouncing — [sway-ipc-optimization.md](sway-ipc-optimization.md)
 
 ### 22. Command batching
 
@@ -233,12 +233,12 @@ Collect rapid events within a short window (~10ms) and process them together, av
 
 ---
 
-## Phase 8 — Session Restore
+## Phase 8 — Session Restore ✅
 
-- [ ] **25.** Layout state persistence (save/load to JSON) — [session-restore.md](session-restore.md)
-- [ ] **26.** Window matching (by `app_id`/`window_class`) — [session-restore.md](session-restore.md)
-- [ ] **27.** Application launch on restore — [session-restore.md](session-restore.md)
-- [ ] **28.** Session commands and config — [session-restore.md](session-restore.md)
+- [x] **25.** Layout state persistence (save/load to JSON) — [session-restore.md](session-restore.md)
+- [x] **26.** Window matching (by `app_id`/`window_class`) — [session-restore.md](session-restore.md)
+- [x] **27.** Application launch on restore — [session-restore.md](session-restore.md)
+- [x] **28.** Session commands and config — [session-restore.md](session-restore.md)
 
 ### 25–28. Session restore
 
@@ -246,11 +246,11 @@ Save workspace layouts and window positions to a JSON file. On restore, match ne
 
 ---
 
-## Phase 9 — Multi-Master
+## Phase 9 — Multi-Master ✅
 
-- [ ] **29.** Multi-master: config and state
-- [ ] **30.** Multi-master: add/remove master commands
-- [ ] **31.** Multi-master: layout arrangement
+- [x] **29.** Multi-master: config and state
+- [x] **30.** Multi-master: add/remove master commands
+- [x] **31.** Multi-master: layout arrangement
 
 ### 29–31. Multi-master windows
 
@@ -271,16 +271,16 @@ Config: `masterCount` (int, default 1). Commands: `master add`, `master remove`.
 
 ---
 
-## Phase 10 — Polish & Lower Priority
+## Phase 10 — Polish & Lower Priority ✅
 
-- [ ] **32.** Focus history — [features.md](features.md)
-- [ ] **33.** Layout manager factory — [improvements.md](improvements.md)
-- [ ] **34.** API docstrings (Google-style) — [improvements.md](improvements.md)
-- [ ] **35.** Graceful error recovery (try/except in event handlers) — [improvements.md](improvements.md)
-- [ ] **36.** `ty` strict mode (zero errors, no `Any` in core) — [type-safety.md](type-safety.md)
-- [ ] **37.** Layout presets (`layman preset save/load`) — [features.md](features.md)
-- [ ] **38.** Window rules (`[rules]` config section) — [features.md](features.md)
-- [ ] **39.** Doc cleanup sweep (stale references across all docs)
+- [x] **32.** Focus history — [features.md](features.md)
+- [x] **33.** Layout manager factory — [improvements.md](improvements.md)
+- [x] **34.** API docstrings (Google-style) — [improvements.md](improvements.md)
+- [x] **35.** Graceful error recovery (try/except in event handlers) — [improvements.md](improvements.md)
+- [x] **36.** `ty` strict mode (zero errors, no `Any` in core) — [type-safety.md](type-safety.md)
+- [x] **37.** Layout presets (`layman preset save/load`) — [features.md](features.md)
+- [x] **38.** Window rules (`[rules]` config section) — [features.md](features.md)
+- [x] **39.** Doc cleanup sweep (stale references across all docs)
 
 ---
 

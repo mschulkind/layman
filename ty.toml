@@ -6,3 +6,7 @@
 # i3ipc.CommandReply, which don't ship type stubs (no py.typed marker).
 # Downgrade to warning until i3ipc adds proper type annotations.
 unresolved-attribute = "warn"
+
+# Stricter mode: catch missing return types and unused imports
+# These are enforced as errors in our CI
+possibly-unbound = "error"

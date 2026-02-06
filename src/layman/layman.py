@@ -830,7 +830,15 @@ class Layman:
                         self.log(
                             f"Handling window '{event.change}' event for window id {event.container.id}"
                         )
-                        handlers[event.change](event, tree, workspace, window)
+                        try:
+                            handlers[event.change](event, tree, workspace, window)
+                        except Exception:
+                            logger.error(
+                                "Error handling '%s' event for window %s",
+                                event.change,
+                                event.container.id,
+                                exc_info=True,
+                            )
                     else:
                         raise RuntimeError(
                             f"Unexpected window event type {event.change}"
@@ -839,6 +847,13 @@ class Layman:
                     raise RuntimeError(f"Invalid event received: {event}")
 
             elif notification["type"] == "command":
-                self.onCommand(notification["command"])
+                try:
+                    self.onCommand(notification["command"])
+                except Exception:
+                    logger.error(
+                        "Error handling command: %s",
+                        notification["command"],
+                        exc_info=True,
+                    )
             else:
                 raise RuntimeError(f"Notification with invalid type: {notification}")

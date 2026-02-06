@@ -26,34 +26,41 @@ from layman.log import get_logger
 
 
 class WorkspaceLayoutManager:
-    # These properties should be overriden to configure your WLM as
-    # needed.
+    """Base class for all workspace layout managers.
+
+    Layout managers control how windows are arranged on a workspace. Each
+    workspace can have at most one active layout manager. Managers receive
+    window events (add, remove, focus, move, float) and commands from
+    keybindings or the CLI.
+
+    To implement a custom layout manager, subclass this and override:
+        - ``shortName``: Unique identifier for the layout.
+        - ``windowAdded()``, ``windowRemoved()``, etc.: Event handlers.
+        - ``onCommand()``: Handles user commands.
+
+    Class Attributes:
+        shortName: Unique short name used in config and CLI (e.g., "MasterStack").
+        overridesMoveBinds: If True, move commands are routed to this manager
+            instead of being passed to Sway/i3 natively.
+        overridesFocusBinds: If True, focus commands are routed to this manager.
+        supportsFloating: If True, ``windowFloating()`` is called. If False,
+            floating toggles are treated as add/remove events.
+
+    Instance Attributes:
+        con: The i3ipc connection for executing IPC commands.
+        workspaceName: Name of the workspace this manager controls.
+        logger: Per-instance logger (named ``module.workspaceName``).
+    """
+
     shortName: ClassVar[str] = "none"
-    overridesMoveBinds: ClassVar[bool] = (
-        False  # Should window movement commands be sent as binds
-    )
-    overridesFocusBinds: ClassVar[bool] = (
-        False  # Should focus movement commands be sent as binds
-    )
-    supportsFloating: ClassVar[bool] = (
-        False  # Should windowFloating be used, or treated as Added/Removed
-    )
+    overridesMoveBinds: ClassVar[bool] = False
+    overridesFocusBinds: ClassVar[bool] = False
+    supportsFloating: ClassVar[bool] = False
 
     con: i3ipc.Connection
     workspaceName: str
     logger: logging.Logger
 
-    # These are the functions you should override to implement a WLM.
-    #
-    # Parameters:
-    # con (i3ipc.Connection): An i3ipc connection for executing commands.
-    # workspace (Optional[i3ipc.Con]):
-    #     The i3ipc.Con of the workspace the layout manager is associated with. This includes all
-    #     windows on the workspace at the time of initialization. If this is called while the
-    #     workspace is empty and not focused, it may not exist in the tree, so this argument may be
-    #     None.
-    # workspaceName (str): The name of the workspace. This exists in case workspace is None.
-    # options (LaymanConfig): The loaded config file used for option defaults.
     def __init__(
         self,
         con: i3ipc.Connection,
@@ -61,59 +68,113 @@ class WorkspaceLayoutManager:
         workspaceName: str,
         options: LaymanConfig,
     ):
+        """Initialize the layout manager.
+
+        Args:
+            con: An i3ipc connection for executing Sway/i3 IPC commands.
+            workspace: The workspace container, or None if the workspace is
+                empty and not focused (doesn't exist in the tree yet).
+            workspaceName: The name of the workspace (always available even
+                when workspace is None).
+            options: The loaded layman configuration.
+        """
         self.con = con
         self.workspaceName = workspaceName
-        # Each layout manager instance gets a logger named for its module + workspace
         module = type(self).__module__ or "layman.managers"
         self.logger = get_logger(f"{module}.{workspaceName}")
 
-    # windowAdded is called when a new window is added to the workspace,
-    # either by being created on the workspace or moved to it from another.
     def windowAdded(
         self, event: i3ipc.WindowEvent, workspace: i3ipc.Con, window: i3ipc.Con
     ) -> None:
-        pass
+        """Called when a new window is added to the workspace.
 
-    # windowRemoved is called when a window is removed from the workspace,
-    # either by being closed or moved to a different workspace. If the workspace
-    # is not focused when the last window is removed, the workspace ceases to exist
-    # before windowRemoved is called, so the workspace argument can sometimes be None.
+        Triggered when a window is created on this workspace or moved here
+        from another workspace.
+
+        Args:
+            event: The i3ipc window event.
+            workspace: The workspace container.
+            window: The newly added window container.
+        """
+
     def windowRemoved(
         self,
         event: i3ipc.WindowEvent,
         workspace: i3ipc.Con | None,
         window: i3ipc.Con,
     ) -> None:
-        pass
+        """Called when a window is removed from the workspace.
 
-    # windowFocused is called when a window on the workspace is focused.
+        Triggered when a window is closed or moved to a different workspace.
+        If the workspace is not focused when the last window is removed, the
+        workspace ceases to exist before this is called, so ``workspace``
+        may be None.
+
+        Args:
+            event: The i3ipc window event.
+            workspace: The workspace container, or None if it no longer exists.
+            window: The removed window container.
+        """
+
     def windowFocused(
         self, event: i3ipc.WindowEvent, workspace: i3ipc.Con, window: i3ipc.Con
     ) -> None:
-        pass
+        """Called when a window on the workspace receives focus.
 
-    # windowMoved is called when a window is moved, but stays on the same
-    # workspace.
+        Args:
+            event: The i3ipc window event.
+            workspace: The workspace container.
+            window: The focused window container.
+        """
+
     def windowMoved(
         self, event: i3ipc.WindowEvent, workspace: i3ipc.Con, window: i3ipc.Con
     ) -> None:
-        pass
+        """Called when a window is moved but stays on the same workspace.
 
-    # windowFloating is called when a window's floating state is toggled.
+        Args:
+            event: The i3ipc window event.
+            workspace: The workspace container.
+            window: The moved window container.
+        """
+
     def windowFloating(
         self, event: i3ipc.WindowEvent, workspace: i3ipc.Con, window: i3ipc.Con
     ) -> None:
-        pass
+        """Called when a window's floating state is toggled.
 
-    # onCommand is called when a layman command is executed while the workspace
-    # is focused, whether the command was from a key binding or the layman cli.
+        Only called if ``supportsFloating`` is True. Otherwise, floating
+        toggles are treated as windowAdded/windowRemoved events.
+
+        Args:
+            event: The i3ipc window event.
+            workspace: The workspace container.
+            window: The window whose floating state changed.
+        """
+
     def onCommand(self, command: str, workspace: i3ipc.Con) -> None:
-        pass
+        """Called when a layman command is executed while this workspace is focused.
 
-    # isExcluded checks if a window should be skipped by layout logic.
-    # Returns True for None windows, non-con types, floating, fullscreen,
-    # and windows in stacked/tabbed containers.
+        Commands come from keybindings or the layman CLI. Examples:
+        "move up", "focus master", "toggle", "maximize".
+
+        Args:
+            command: The command string (already stripped of workspace prefix).
+            workspace: The workspace container.
+        """
+
     def isExcluded(self, window: i3ipc.Con | None) -> bool:
+        """Check if a window should be skipped by layout logic.
+
+        Returns True for None windows, non-con types, floating, fullscreen,
+        and windows in stacked/tabbed containers.
+
+        Args:
+            window: The window to check, or None.
+
+        Returns:
+            True if the window should be excluded from layout management.
+        """
         if window is None:
             return True
 
@@ -137,8 +198,15 @@ class WorkspaceLayoutManager:
 
         return False
 
-    # command is used by the layout manager itself to run commands.
     def command(self, command: str) -> None:
+        """Execute a Sway/i3 IPC command.
+
+        Logs the command and its result. Used internally by layout managers
+        to manipulate the window tree.
+
+        Args:
+            command: The IPC command string (e.g., "[con_id=42] focus").
+        """
         self.logger.debug("Running command: %s", command, stacklevel=2)
         results = self.con.command(command)
         for result in results:
