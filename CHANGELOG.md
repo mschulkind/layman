@@ -178,14 +178,57 @@ Test suite grew from 0 to 278 unit tests.
 
 Last state before the 2025–2026 refactoring effort.
 
-### Notable additions (2024-01-29 – 2024-02-18)
+### Bug Fixes (2024-01-29 – 2024-02-18)
+
+- Fixed a host of float-related bugs in MasterStack.
+- Fixed `windowRemoved` crash when the workspace no longer exists.
+- Fixed manually resized master reverting back to default width.
+- Fixed `moveWindowToIndex` off-by-one bounds check.
+- Fixed `moveWindowToIndex` general bug in index calculation.
+- Fixed substack rebalancing when moving into the substack by one position.
+- Fixed an exception when removing all windows from a workspace.
+- Fixed extra nesting removal when nesting doesn't exist.
+- Fixed window ID logging in several places.
+
+### Features (2024-01-29 – 2024-02-18)
 
 - Major overhaul of core event handling logic.
 - Major overhaul of MasterStack layout (substacks, visible stack limit).
-- Floating window detection for both Sway and i3.
-- Timestamped logging.
-- Config validation with clear error messages.
-- Configurable master width, stack layout, visible stack limit.
-- Workspace-specific configuration (`[workspace.NAME]`).
+- `maximize` command for fake fullscreen (tabbed mode).
+- `focus up`/`focus down` override for MasterStack.
+- `move to index` command.
+- `move to master` command.
 - Window wrapping on move.
+- Floating window detection for both Sway and i3.
+- Default workspace layouts for non-layman layouts.
+- Better config validation and error messages for MasterStack.
+- Timestamped logging in core.
 - Source files reorganized into `src/layman/` package structure.
+- Workspace name tracking (instead of workspace number).
+
+---
+
+## [Initial] — 2022-02-17 – 2023-05-31
+
+Original implementation and early development.
+
+### Features
+
+- MasterStack layout manager with master/stack window arrangement.
+- Autotiling layout manager (ported depth limit from nwg-piotr).
+- Grid layout manager.
+- TOML configuration with workspace-specific overrides.
+- Configurable master width, stack layout, stack side.
+- Stack layout toggle (splith/splitv/tabbed/stacking).
+- Stack side toggle (left/right).
+- Window rotation (clockwise/counterclockwise).
+- Swap with master command.
+- Named pipe command server for IPC.
+- Sway binding event handling (`nop layman` prefix).
+- Floating window state change handling (pop/push on float toggle).
+- User-defined custom layout managers loaded from config directory.
+- Workspace exclusion list.
+- Auto-arrange untracked windows when activating a layout.
+- Event queue with priority ordering.
+- Separate connections for events and commands.
+- Example Sway config.
