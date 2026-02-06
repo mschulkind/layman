@@ -151,9 +151,10 @@ class Layman:
             # focused window, or the focused window doesn't match the one in the event, we just
             # assume that the focused changed again and quickly after this event was fired, so we
             # ignore it.
-            self.log(
-                f"focused window {event.container.id} not found,"
-                + f" found {focused_workspace_window.id if focused_workspace_window else None} instead"
+            logger.warning(
+                "Stale focus event: window %s no longer focused (current: %s), skipping",
+                event.container.id,
+                focused_workspace_window.id if focused_workspace_window else None,
             )
             return
 
