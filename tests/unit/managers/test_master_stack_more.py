@@ -374,7 +374,7 @@ class TestOnCommandMore:
         workspace.nodes = [focused, MockCon(id=200)]
         mock_connection.tree = workspace
 
-        manager.onCommand("stack toggle", workspace)
+        manager.onCommand("toggle", workspace)
 
         assert manager.stackLayout != original_layout
 

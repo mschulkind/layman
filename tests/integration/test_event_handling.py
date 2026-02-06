@@ -94,9 +94,9 @@ class TestMockedEventHandling:
         """Test that binding events are parsed correctly."""
         from tests.mocks.i3ipc_mocks import MockBindingEvent
 
-        event = MockBindingEvent(command="nop layman maximize")
+        event = MockBindingEvent(command="nop layman layout maximize")
 
-        assert event.binding.command == "nop layman maximize"
+        assert event.binding.command == "nop layman layout maximize"
         assert event.binding.command.startswith("nop layman")
 
     def test_window_event_parsing(self):

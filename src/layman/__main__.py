@@ -27,19 +27,27 @@ HELP_TEXT = """Layman - Sway/i3 Layout Manager
 
 Usage: layman [command]
 
-Commands:
-  layout <name>      Set layout (MasterStack, Autotiling, Grid, none)
-  move <dir>         Move focused window (up, down, left, right, to master)
-  focus <dir>        Focus window (up, down, master)
-  stack toggle       Cycle stack layout
-  stackside toggle   Swap stack side
-  maximize           Toggle fake fullscreen
-  rotate <dir>       Rotate windows (cw, ccw)
-  swap master        Swap focused window with master
-  reload             Reload configuration
-  status             Show current state
-  status --json      Show current state as JSON (for waybar/scripts)
-  help               Show this message
+Window Commands:
+  window move <dir>          Move focused window (up, down, left, right)
+  window move to master      Move focused window to master position
+  window move to index <n>   Move focused window to position <n>
+  window focus <dir>         Focus window (up, down, master)
+  window swap master         Swap focused window with master
+  window rotate <dir>        Rotate windows (cw, ccw)
+
+Stack Commands:
+  stack toggle               Cycle stack layout
+  stack side toggle           Swap stack side
+
+Layout Commands:
+  layout set <name>          Set layout (MasterStack, Autotiling, Grid, none)
+  layout maximize            Toggle fake fullscreen
+
+General Commands:
+  reload                     Reload configuration
+  status                     Show current state
+  status --json              Show current state as JSON (for waybar/scripts)
+  help                       Show this message
 
 Without arguments, layman starts the daemon.
 
@@ -102,16 +110,19 @@ def main():
         pipe_path = get_pipe_path()
         if send_command(command, pipe_path):
             # Decision #14: Show feedback for commands
-            if command.startswith("layout "):
-                layout_name = command.split(" ", 1)[1]
+            if command.startswith("layout set "):
+                layout_name = command.split(" ", 2)[2]
                 print(f"Layout set to {layout_name}")
-            elif command == "maximize":
+            elif command == "layout maximize":
                 print("Maximize toggled")
             elif command == "reload":
                 print("Configuration reloaded")
-            elif command.startswith("move "):
-                direction = command.split(" ", 1)[1]
+            elif command.startswith("window move "):
+                direction = command.split(" ", 2)[2]
                 print(f"Window moved {direction}")
+            elif command.startswith("stack "):
+                action = command[len("stack ") :]
+                print(f"Stack {action}")
         return
 
     # Start layman daemon

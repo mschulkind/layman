@@ -511,7 +511,7 @@ class TestOnCommandExtended:
         mock_connection.tree = workspace
 
         mock_connection.clear_commands()
-        manager.onCommand("stackside toggle", workspace)
+        manager.onCommand("side toggle", workspace)
 
         assert manager.stackSide != original_side
 
