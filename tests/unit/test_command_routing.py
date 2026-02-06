@@ -157,10 +157,14 @@ class TestLayoutCommandRouting:
         mock_set.assert_called_once_with(workspace, "1", "MasterStack")
 
     def test_layoutMaximize_routesToManager(self, layman_instance):
-        """'layout maximize' should pass 'maximize' to the layout manager."""
+        """'layout maximize' should toggle fake fullscreen via the layout manager."""
         workspace, manager, _ = setup_workspace_with_manager(layman_instance)
+        focused_window = MockCon(id=100, name="focused", focused=True)
 
-        with patch("layman.utils.findFocusedWorkspace", return_value=workspace):
+        with (
+            patch("layman.utils.findFocusedWorkspace", return_value=workspace),
+            patch("layman.utils.findFocusedWindow", return_value=focused_window),
+        ):
             layman_instance.handleCommand("layout maximize")
 
         manager.onCommand.assert_called_once_with("maximize", workspace)

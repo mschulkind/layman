@@ -54,6 +54,10 @@ class WorkspaceState:
     # The set of all window IDs on the workspace, including floating windows.
     windowIds: set[int] = field(default_factory=set)
     isExcluded: bool = False
+    # Fake fullscreen state (global, works with any layout)
+    fakeFullscreen: bool = False
+    fakeFullscreenWindowId: int | None = None
+    savedStackLayout: str | None = None
 
 
 @contextmanager
@@ -206,6 +210,14 @@ class Layman:
             f"Removing window ID {event.container.id} from workspace {workspaceName}"
         )
         self.log(f"Workspace {workspaceName} window ids: {state.windowIds}")
+
+        # If the fake-fullscreened window was closed, exit fake fullscreen
+        if state.fakeFullscreen and state.fakeFullscreenWindowId == event.container.id:
+            state.fakeFullscreen = False
+            state.fakeFullscreenWindowId = None
+            state.savedStackLayout = None
+            self.log("Fake fullscreen window closed, exiting fake fullscreen")
+
         self.handleWindowRemoved(event, workspace, workspaceName, window)
 
     def windowMoved(
@@ -359,12 +371,7 @@ class Layman:
                 shortName = rest[len("set ") :]
                 self.setWorkspaceLayout(workspace, workspace.name, shortName)
             elif rest == "maximize":
-                if state.layoutManager:
-                    self.log("Calling manager for workspace %s" % workspace.name)
-                    with layoutManagerReloader(self, workspace):
-                        state.layoutManager.onCommand("maximize", workspace)
-                else:
-                    self.log("No manager for workspace %s, ignoring" % workspace.name)
+                self.toggleFakeFullscreen(workspace, state)
             else:
                 self.logError(f"Unknown layout command: '{command}'")
             return
@@ -440,6 +447,59 @@ class Layman:
     The following section of code handles miscellaneous tasks needed by the event
     handlers above.
     """
+
+    def toggleFakeFullscreen(self, workspace: Con, state: WorkspaceState) -> None:
+        """Toggle fake fullscreen for the focused workspace.
+
+        Works with any layout (or no layout). Uses tabbed mode to show only
+        the focused window while keeping the bar visible.
+        """
+        if state.fakeFullscreen:
+            # Restore from fake fullscreen
+            state.fakeFullscreen = False
+            state.fakeFullscreenWindowId = None
+
+            if state.layoutManager:
+                # Let the layout manager re-arrange everything
+                self.log("Restoring layout after fake fullscreen")
+                with layoutManagerReloader(self, workspace):
+                    state.layoutManager.onCommand("maximize", workspace)
+            elif state.savedStackLayout:
+                # Restore native layout
+                windowIds = list(state.windowIds)
+                if windowIds:
+                    self.command(
+                        f"[con_id={windowIds[0]}] layout {state.savedStackLayout}"
+                    )
+                state.savedStackLayout = None
+
+            self.log(f"Exited fake fullscreen on workspace {workspace.name}")
+        else:
+            # Enter fake fullscreen
+            focused = utils.findFocusedWindow(self.conn)
+            if not focused:
+                self.log("No focused window for fake fullscreen")
+                return
+
+            state.fakeFullscreenWindowId = focused.id
+
+            if state.layoutManager:
+                self.log("Entering fake fullscreen via layout manager")
+                with layoutManagerReloader(self, workspace):
+                    state.layoutManager.onCommand("maximize", workspace)
+            else:
+                # Save current layout and switch to tabbed
+                windowIds = list(state.windowIds)
+                if windowIds:
+                    # Find current layout of the parent container
+                    tree = self.conn.get_tree()
+                    window = tree.find_by_id(focused.id)
+                    if window and window.parent:
+                        state.savedStackLayout = window.parent.layout
+                    self.command(f"[con_id={windowIds[0]}] layout tabbed")
+
+            state.fakeFullscreen = True
+            self.log(f"Entered fake fullscreen on workspace {workspace.name}")
 
     # Runs and logs a command and its result.
     def command(self, command: str):
