@@ -6,15 +6,53 @@ bindsym $mod+a nop layman layout set Autotiling
 bindsym $mod+m nop layman layout set MasterStack
 bindsym $mod+n nop layman layout set none
 bindsym $mod+g nop layman layout set Grid
+bindsym $mod+t nop layman layout set ThreeColumn
+bindsym $mod+p nop layman layout set TabbedPairs
 
-# For MasterStack
+# For MasterStack / ThreeColumn
 bindsym $mod+s nop layman window swap master
-bindsym $mod+t nop layman stack toggle
+bindsym $mod+Return nop layman window focus master
+bindsym $mod+equal nop layman master add
+bindsym $mod+minus nop layman master remove
+
+# Stack controls
+bindsym $mod+l nop layman stack toggle
 bindsym $mod+r nop layman stack side toggle
+
+# Fake fullscreen (works with any layout)
 bindsym $mod+f nop layman layout maximize
 
-# Override move binds
+# Override move/focus binds
 bindsym $mod+Shift+Left nop layman window move left
 bindsym $mod+Shift+Down nop layman window move down
 bindsym $mod+Shift+Up nop layman window move up
 bindsym $mod+Shift+Right nop layman window move right
+bindsym $mod+Left nop layman window focus left
+bindsym $mod+Down nop layman window focus down
+bindsym $mod+Up nop layman window focus up
+bindsym $mod+Right nop layman window focus right
+
+# Focus history
+bindsym $mod+Tab nop layman window focus previous
+
+# Session management
+# bindsym $mod+Shift+s nop layman session save default
+# bindsym $mod+Shift+r nop layman session restore default
+
+# Preset management (inside a mode)
+mode "layman" {
+  bindsym m nop layman layout set MasterStack; mode "default"
+  bindsym a nop layman layout set Autotiling; mode "default"
+  bindsym g nop layman layout set Grid; mode "default"
+  bindsym t nop layman layout set ThreeColumn; mode "default"
+  bindsym p nop layman layout set TabbedPairs; mode "default"
+  bindsym n nop layman layout set none; mode "default"
+  bindsym f nop layman layout maximize; mode "default"
+  bindsym s nop layman stack side toggle; mode "default"
+  bindsym l nop layman stack toggle; mode "default"
+  bindsym plus nop layman master add; mode "default"
+  bindsym minus nop layman master remove; mode "default"
+
+  bindsym Return mode "default"
+  bindsym Escape mode "default"
+}
