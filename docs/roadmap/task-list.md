@@ -65,6 +65,7 @@ These are resolved per [decisions.md](../decisions.md) and the current codebase:
 | 7 | Resolve `ty` type errors (core + utils) | ⬜ | [type-safety.md](type-safety.md) |
 | 8 | Full type annotations on base `WorkspaceLayoutManager` | ⬜ | [type-safety.md](type-safety.md) |
 | 9 | Fix minor bugs: focus race condition, inconsistent logging | ⬜ | [bugs.md](bugs.md) |
+| 9a | Structured logging with levels and per-module control | ⬜ | New |
 
 ### 3. Extract `isExcluded()` to base class
 
@@ -91,6 +92,35 @@ Fix `ty` errors in core event loop, annotate `WorkspaceState`, resolve `None` ri
 - **Focus race condition:** Rapid focus changes can cause stale events. Add event sequence guard.
 - **Inconsistent logging:** Standardize all logging on `self.log()` and `self.logCaller()`.
 
+### 9a. Structured logging with levels and per-module control
+
+Replace all ad-hoc `print()` / `self.log()` / `self.debug` logging with Python's `logging` module.
+
+**Log levels:**
+- `DEBUG` — Verbose per-event detail: window IDs, rect sizes, command strings, state transitions
+- `INFO` — High-level actions: layout set, window added/removed, config loaded
+- `WARNING` — Recoverable issues: window not found, stale event skipped
+- `ERROR` — Failures: command failed, config error, assertion failed
+
+**Per-module loggers:**
+Each module gets its own named logger (e.g., `layman.layman`, `layman.managers.master_stack`, `layman.listener`, `layman.server`). Layout managers also include workspace name in the logger name or log record.
+
+**Config:**
+```toml
+[layman]
+logLevel = "info"                           # global default
+
+[logging]
+"layman.managers.master_stack" = "debug"    # per-module override
+"layman.listener" = "warning"               # quiet the listener
+```
+
+**CLI override:**
+```bash
+layman --log-level debug                    # override global level from CLI
+```
+
+This replaces the boolean `debug` flag, the `self.log()` / `self.logError()` / `self.logCaller()` methods, and the `inspect.stack()` caller-name hack (the `logging` module provides this natively via `%(funcName)s`).
 ---
 
 ## Phase 3 — Command Naming & UX
