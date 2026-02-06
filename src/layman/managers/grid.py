@@ -28,8 +28,8 @@ class GridLayoutManager(WorkspaceLayoutManager):
         result = self.con.command(("[con_id=%d]" % window.id) + newLayout)
         if result[0].success:
             self.log("Switched to %s" % newLayout)
-        elif self.debug:
-            self.log(f"Error: Switch failed with err {result[0].error}")
+        else:
+            self.logError(f"Switch failed with err {result[0].error}")
 
     def moveWindow(self, moveId, targetId):
         self.con.command("[con_id=%d] mark --add move_target" % targetId)

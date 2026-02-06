@@ -17,16 +17,13 @@ You should have received a copy of the GNU General Public License along with
 layman. If not, see <https://www.gnu.org/licenses/>.
 """
 
-import inspect
 import itertools
 import logging
 import os
 import shutil
-import sys
 from collections.abc import Callable
 from contextlib import contextmanager
 from dataclasses import dataclass, field
-from datetime import datetime
 from importlib.machinery import SourceFileLoader
 from queue import SimpleQueue
 from typing import Any, cast
@@ -37,6 +34,7 @@ from setproctitle import setproctitle
 from layman import config, utils
 from layman.config import ConfigError
 from layman.listener import ListenerThread
+from layman.log import get_logger, setup_logging
 from layman.managers import (
     AutotilingLayoutManager,
     GridLayoutManager,
@@ -44,6 +42,8 @@ from layman.managers import (
     WorkspaceLayoutManager,
 )
 from layman.server import MessageServer
+
+logger = get_logger(__name__)
 
 
 @dataclass
@@ -385,13 +385,13 @@ class Layman:
 
     # Runs and logs a command and its result.
     def command(self, command: str):
-        self.logCaller(f"Running command: {command}")
+        logger.debug("Running command: %s", command, stacklevel=2)
         results = self.conn.command(command)
         for result in results:
             if result.success:
-                self.logCaller("Command succeeded.")
+                logger.debug("Command succeeded.", stacklevel=2)
             else:
-                self.logCaller(f"Command failed: {result.error}")
+                logger.error("Command failed: %s", result.error, stacklevel=2)
 
     def fetchUserLayouts(self):
         self.userLayouts = {}
@@ -562,28 +562,22 @@ class Layman:
                     os.path.join(os.path.dirname(__file__), "config.toml"), configPath
                 )
             else:
-                self.logCaller("Path to user config does not exist: %s" % configPath)
+                logger.error("Path to user config does not exist: %s", configPath)
                 exit()
 
-    def getCurrentTimestamp(self) -> str:
-        current_time = datetime.now()
-        return current_time.strftime("%Y-%m-%d %H:%M:%S.%f")[:-3]
-
     def log(self, msg):
-        if self.options.getDefault(config.KEY_DEBUG):
-            print(f"[{self.getCurrentTimestamp()}] {inspect.stack()[1][3]}: {msg}")
+        logger.debug(msg, stacklevel=2)
 
     def logCaller(self, msg):
-        if self.options.getDefault(config.KEY_DEBUG):
-            print(f"[{self.getCurrentTimestamp()}] {inspect.stack()[2][3]}: {msg}")
+        logger.debug(msg, stacklevel=3)
 
     def logError(self, msg):
-        print(
-            f"[{self.getCurrentTimestamp()}] {inspect.stack()[1][3]}: {msg}",
-            file=sys.stderr,
-        )
+        logger.error(msg, stacklevel=2)
 
     def run(self):
+        # Set up structured logging from config
+        setup_logging(self.options)
+
         self.conn = Connection()
         notificationQueue = SimpleQueue()
 
