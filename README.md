@@ -87,7 +87,7 @@ Without arguments, `layman` starts the daemon. With arguments, it sends a comman
 ```bash
 layman                    # start the daemon
 layman help               # show all commands
-layman layout MasterStack # set layout on focused workspace
+layman layout set MasterStack # set layout on focused workspace
 layman reload             # reload config
 ```
 
@@ -98,28 +98,28 @@ There are two ways to send commands to layman:
 **1. `nop` bindings (recommended)** — no process overhead, instant response:
 
 ```
-bindsym $mod+m nop layman layout MasterStack
+bindsym $mod+m nop layman layout set MasterStack
 ```
 
 **2. `exec` bindings** — spawns a process, works even if you want to script layman:
 
 ```
-bindsym $mod+m exec layman layout MasterStack
+bindsym $mod+m exec layman layout set MasterStack
 ```
 
 ### All Commands
 
 | Command | Description |
 |---------|-------------|
-| `layout <name>` | Set layout (`MasterStack`, `Autotiling`, `Grid`, `none`) |
-| `move <direction>` | Move window (`up`, `down`, `left`, `right`, `to master`) |
-| `focus <direction>` | Focus window (`up`, `down`, `master`) |
-| `swap master` | Swap focused window with master |
-| `rotate cw` | Rotate layout clockwise |
-| `rotate ccw` | Rotate layout counter-clockwise |
+| `layout set <name>` | Set layout (`MasterStack`, `Autotiling`, `Grid`, `none`) |
+| `window move <direction>` | Move window (`up`, `down`, `left`, `right`, `to master`) |
+| `window focus <direction>` | Focus window (`up`, `down`, `master`) |
+| `window swap master` | Swap focused window with master |
+| `window rotate cw` | Rotate layout clockwise |
+| `window rotate ccw` | Rotate layout counter-clockwise |
 | `stack toggle` | Cycle stack layout (splitv → splith → stacking → tabbed) |
-| `stackside toggle` | Toggle stack side (left ↔ right) |
-| `maximize` | Toggle fake fullscreen |
+| `stack side toggle` | Toggle stack side (left ↔ right) |
+| `layout maximize` | Toggle fake fullscreen |
 | `reload` | Reload configuration |
 | `status` | Show current workspace state |
 | `help` | Show command help |
@@ -131,7 +131,7 @@ bindsym $mod+m exec layman layout MasterStack
 Does nothing. Use this to disable layout management on a workspace.
 
 ```
-layman layout none
+layman layout set none
 ```
 
 ### Autotiling
@@ -145,7 +145,7 @@ Config options:
 | `depthLimit` | int | `0` | Max nesting depth (`0` = unlimited) |
 
 ```
-layman layout Autotiling
+layman layout set Autotiling
 ```
 
 ### Grid
@@ -157,7 +157,7 @@ Distributes windows evenly by always splitting the largest container, creating a
 No layout-specific config options.
 
 ```
-layman layout Grid
+layman layout set Grid
 ```
 
 ### MasterStack
@@ -178,17 +178,17 @@ Config options:
 MasterStack commands:
 
 ```
-layman layout MasterStack    # activate MasterStack
-layman swap master           # swap focused with master
-layman move to master        # move focused to master position
-layman move up               # move up in stack
-layman move down             # move down in stack
-layman rotate cw             # rotate clockwise
-layman rotate ccw            # rotate counter-clockwise
+layman layout set MasterStack    # activate MasterStack
+layman window swap master           # swap focused with master
+layman window move to master        # move focused to master position
+layman window move up               # move up in stack
+layman window move down             # move down in stack
+layman window rotate cw             # rotate clockwise
+layman window rotate ccw            # rotate counter-clockwise
 layman stack toggle          # cycle stack layout
-layman stackside toggle      # toggle stack side
-layman focus master          # focus the master window
-layman maximize              # toggle fake fullscreen
+layman stack side toggle      # toggle stack side
+layman window focus master          # focus the master window
+layman layout maximize              # toggle fake fullscreen
 ```
 
 ### User Created Layouts
@@ -204,24 +204,24 @@ Your layout must inherit from `WorkspaceLayoutManager` and have a unique `shortN
 exec layman
 
 # Layout switching
-bindsym $mod+a nop layman layout Autotiling
-bindsym $mod+m nop layman layout MasterStack
-bindsym $mod+g nop layman layout Grid
-bindsym $mod+n nop layman layout none
+bindsym $mod+a nop layman layout set Autotiling
+bindsym $mod+m nop layman layout set MasterStack
+bindsym $mod+g nop layman layout set Grid
+bindsym $mod+n nop layman layout set none
 
 # MasterStack controls
-bindsym $mod+Return nop layman swap master
+bindsym $mod+Return nop layman window swap master
 bindsym $mod+t nop layman stack toggle
-bindsym $mod+y nop layman stackside toggle
-bindsym $mod+r nop layman rotate cw
-bindsym $mod+Shift+r nop layman rotate ccw
-bindsym $mod+f nop layman maximize
+bindsym $mod+y nop layman stack side toggle
+bindsym $mod+r nop layman window rotate cw
+bindsym $mod+Shift+r nop layman window rotate ccw
+bindsym $mod+f nop layman layout maximize
 
 # Movement overrides
-bindsym $mod+Shift+Left nop layman move left
-bindsym $mod+Shift+Down nop layman move down
-bindsym $mod+Shift+Up nop layman move up
-bindsym $mod+Shift+Right nop layman move right
+bindsym $mod+Shift+Left nop layman window move left
+bindsym $mod+Shift+Down nop layman window move down
+bindsym $mod+Shift+Up nop layman window move up
+bindsym $mod+Shift+Right nop layman window move right
 
 # Reload config
 bindsym $mod+Shift+c nop layman reload

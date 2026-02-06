@@ -114,37 +114,37 @@ visibleStackLimit = 5      # More visible stack windows
 ### Layout Control
 
 ```
-layman layout MasterStack    # Activate MasterStack
+layman layout set MasterStack    # Activate MasterStack
 layman stack toggle          # Cycle: splitv → splith → tabbed → stacking
-layman stackside toggle      # Toggle: left ↔ right
-layman maximize              # Toggle maximize mode
+layman stack side toggle      # Toggle: left ↔ right
+layman layout maximize              # Toggle maximize mode
 ```
 
 ### Window Movement
 
 ```
-layman swap master           # Swap focused with master
-layman move to master        # Move focused to master position
-layman move up               # Move focused up in stack
-layman move down             # Move focused down in stack
-layman move left             # Move towards/away from master
-layman move right            # Move towards/away from master
-layman move to index <n>     # Move to specific position (0 = master)
+layman window swap master           # Swap focused with master
+layman window move to master        # Move focused to master position
+layman window move up               # Move focused up in stack
+layman window move down             # Move focused down in stack
+layman window move left             # Move towards/away from master
+layman window move right            # Move towards/away from master
+layman window move to index <n>     # Move to specific position (0 = master)
 ```
 
 ### Window Focus
 
 ```
-layman focus master          # Focus master window
-layman focus up              # Focus previous window
-layman focus down            # Focus next window
+layman window focus master          # Focus master window
+layman window focus up              # Focus previous window
+layman window focus down            # Focus next window
 ```
 
 ### Rotation
 
 ```
-layman rotate cw             # Rotate clockwise
-layman rotate ccw            # Rotate counter-clockwise
+layman window rotate cw             # Rotate clockwise
+layman window rotate ccw            # Rotate counter-clockwise
 ```
 
 ## Visible Stack Limit (Substack)
@@ -170,7 +170,7 @@ Set `visibleStackLimit = 0` to disable the substack and show all stack windows i
 
 ## Maximize Mode
 
-Toggle with `layman maximize`:
+Toggle with `layman layout maximize`:
 
 - Turns entire workspace into tabbed layout
 - Master becomes first tab
@@ -180,11 +180,11 @@ Toggle with `layman maximize`:
 ## Key Bindings Example
 
 ```
-bindsym $mod+m nop layman layout MasterStack
-bindsym $mod+Return nop layman swap master
+bindsym $mod+m nop layman layout set MasterStack
+bindsym $mod+Return nop layman window swap master
 bindsym $mod+t nop layman stack toggle
-bindsym $mod+y nop layman stackside toggle
-bindsym $mod+r nop layman rotate cw
-bindsym $mod+Shift+r nop layman rotate ccw
-bindsym $mod+f nop layman maximize
+bindsym $mod+y nop layman stack side toggle
+bindsym $mod+r nop layman window rotate cw
+bindsym $mod+Shift+r nop layman window rotate ccw
+bindsym $mod+f nop layman layout maximize
 ```

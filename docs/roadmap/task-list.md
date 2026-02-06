@@ -127,8 +127,8 @@ This replaces the boolean `debug` flag, the `self.log()` / `self.logError()` / `
 
 | # | Task | Status | Source |
 |---|------|--------|--------|
-| 10 | Implement subcommand naming (Proposal B) | ⬜ | [command-naming.md](command-naming.md) |
-| 11 | Migrate docs and keybinding examples | ⬜ | [command-naming.md](command-naming.md) |
+| 10 | Implement subcommand naming (Proposal B) | ✅ | [command-naming.md](command-naming.md) |
+| 11 | Migrate docs and keybinding examples | ✅ | [command-naming.md](command-naming.md) |
 
 ### 10–11. Command naming
 

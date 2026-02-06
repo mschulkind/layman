@@ -76,7 +76,7 @@ depthLimit = 0 (unlimited):        depthLimit = 2:
 ## Commands
 
 ```
-layman layout Autotiling  # Activate Autotiling on workspace
+layman layout set Autotiling  # Activate Autotiling on workspace
 ```
 
 No additional commands - Autotiling is passive.

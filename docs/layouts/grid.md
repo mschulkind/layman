@@ -56,7 +56,7 @@ Grid has no layout-specific options. It uses only the global `debug` setting.
 ## Commands
 
 ```
-layman layout Grid  # Activate Grid on workspace
+layman layout set Grid  # Activate Grid on workspace
 ```
 
 No additional commands - Grid is passive.

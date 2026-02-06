@@ -58,12 +58,12 @@ This section documents each layout manager included with layman.
 
 ```
 # Via keybinding
-bindsym $mod+a nop layman layout Autotiling
-bindsym $mod+m nop layman layout MasterStack
-bindsym $mod+g nop layman layout Grid
+bindsym $mod+a nop layman layout set Autotiling
+bindsym $mod+m nop layman layout set MasterStack
+bindsym $mod+g nop layman layout set Grid
 
 # Via CLI
-layman layout MasterStack
+layman layout set MasterStack
 ```
 
 ## Common Configuration

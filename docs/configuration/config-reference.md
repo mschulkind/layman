@@ -91,7 +91,7 @@ debug = true
 
 ### `pipePath`
 
-Path to the named pipe used for IPC commands (e.g., `layman layout MasterStack` from the command line).
+Path to the named pipe used for IPC commands (e.g., `layman layout set MasterStack` from the command line).
 
 | | |
 |---|---|
@@ -227,7 +227,7 @@ stackSide = "right" (default):    stackSide = "left":
 └─────────┴──────────┘           └──────────┴─────────┘
 ```
 
-You can toggle sides at runtime with `layman stackside toggle`.
+You can toggle sides at runtime with `layman stack side toggle`.
 
 ### `visibleStackLimit`
 
@@ -351,4 +351,4 @@ Or bind it to a key in your sway/i3 config:
 bindsym $mod+Shift+c nop layman reload
 ```
 
-> **Note:** Reloading updates the config, but existing layout managers keep their current settings. To apply changes to a workspace that already has a layout, re-set the layout: `layman layout MasterStack`.
+> **Note:** Reloading updates the config, but existing layout managers keep their current settings. To apply changes to a workspace that already has a layout, re-set the layout: `layman layout set MasterStack`.

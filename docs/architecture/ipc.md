@@ -66,7 +66,7 @@ focused = tree.find_focused()
 A named pipe at `/tmp/layman.pipe` allows external commands:
 
 ```bash
-echo "layout MasterStack" > /tmp/layman.pipe
+echo "layout set MasterStack" > /tmp/layman.pipe
 ```
 
 ### Implementation
@@ -117,7 +117,7 @@ sequenceDiagram
     IPC->>SW: Apply layout
 
     Note over P,CLI: CLI command
-    CLI->>P: echo "layout X"
+    CLI->>P: echo "layout set X"
     P->>L: Command received
     L->>IPC: Execute command
     IPC->>SW: Apply layout
@@ -128,7 +128,7 @@ sequenceDiagram
 ### Using `nop` (Recommended)
 
 ```
-bindsym $mod+m nop layman layout MasterStack
+bindsym $mod+m nop layman layout set MasterStack
 ```
 
 Sway processes this as a no-op but generates a `BindingEvent` that layman receives.
@@ -136,7 +136,7 @@ Sway processes this as a no-op but generates a `BindingEvent` that layman receiv
 ### Using `exec` (Alternative)
 
 ```
-bindsym $mod+m exec layman layout MasterStack
+bindsym $mod+m exec layman layout set MasterStack
 ```
 
 Starts a new layman process that writes to the pipe. More overhead.
