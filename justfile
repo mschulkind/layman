@@ -171,6 +171,33 @@ validate-mermaid:
 build:
     uv build
 
+# Install the built package as a uv tool
+install: build
+    uv tool install dist/*.whl --force
+
+# Uninstall the uv tool
+uninstall:
+    uv tool uninstall layman || true
+
+# Reinstall the package
+reinstall: uninstall install
+
+# Restart the systemd service
+restart-service:
+    systemctl --user restart layman
+
+# Full deploy: build, install, restart service
+deploy: install restart-service
+    @echo "Layman deployed and service restarted"
+
+# Show service status
+status:
+    systemctl --user status layman
+
+# View service logs
+logs:
+    journalctl --user -u layman -f
+
 # Clean build artifacts
 clean:
     rm -rf dist/ build/ *.egg-info src/*.egg-info

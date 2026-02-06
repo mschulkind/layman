@@ -17,10 +17,15 @@ layman. If not, see <https://www.gnu.org/licenses/>.
 """
 
 import os
+import shutil
+import subprocess
 import sys
+from pathlib import Path
 
 from . import config, layman, utils
 from .server import DEFAULT_PIPE_PATH
+
+DEFAULT_CONFIG_PATH = Path("~/.config/layman/config.toml").expanduser()
 
 # Decision #16: Help text
 HELP_TEXT = """Layman - Sway/i3 Layout Manager
@@ -48,6 +53,10 @@ General Commands:
   status                     Show current state
   status --json              Show current state as JSON (for waybar/scripts)
   help                       Show this message
+
+Service Commands:
+  install-service            Install layman as a systemd user service
+  init-config                Create example config at ~/.config/layman/config.toml
 
 Without arguments, layman starts the daemon.
 
@@ -89,6 +98,113 @@ def send_command(command: str, pipe_path: str) -> bool:
         return False
 
 
+def create_example_config(path: Path | None = None) -> Path:
+    """Create an example configuration file."""
+    path = path or DEFAULT_CONFIG_PATH
+    path = Path(path).expanduser().resolve()
+    path.parent.mkdir(parents=True, exist_ok=True)
+    example_content = """\
+# Layman Configuration
+#
+# See https://github.com/frap129/layman/tree/master/docs for full documentation.
+
+[layman]
+defaultLayout = "none"        # Default layout: none, MasterStack, Autotiling, Grid
+# excludedWorkspaces = []     # Workspace numbers to ignore
+# debug = false               # Enable debug logging
+# pipePath = "/tmp/layman.pipe"
+
+# MasterStack options
+# stackLayout = "splitv"      # splitv, splith, stacking, tabbed
+# stackSide = "right"         # left, right
+# masterWidth = 50            # Master width percentage (1-99)
+# visibleStackLimit = 3       # Max visible stack windows (0 = unlimited)
+
+# Autotiling options
+# depthLimit = 0              # 0 = unlimited
+
+# Per-workspace overrides
+# [workspace.1]
+# defaultLayout = "MasterStack"
+# masterWidth = 70
+# stackSide = "left"
+"""
+    with open(path, "w") as f:
+        f.write(example_content)
+    return path
+
+
+def install_service() -> None:
+    """Install layman as a systemd user service."""
+    service_dir = Path("~/.config/systemd/user").expanduser()
+    service_dir.mkdir(parents=True, exist_ok=True)
+    service_file = service_dir / "layman.service"
+
+    # Find the layman executable
+    layman_path = shutil.which("layman")
+    if not layman_path:
+        try:
+            result = subprocess.run(
+                ["uv", "tool", "run", "--from", "layman", "which", "layman"],
+                capture_output=True,
+                text=True,
+            )
+            if result.returncode == 0:
+                layman_path = result.stdout.strip()
+        except FileNotFoundError:
+            pass
+
+    if not layman_path:
+        print("Could not find layman executable.", file=sys.stderr)
+        print("Install it first with: uv tool install layman", file=sys.stderr)
+        sys.exit(1)
+
+    service_content = f"""\
+[Unit]
+Description=Layman - Sway/i3 Layout Manager
+After=graphical-session.target
+PartOf=graphical-session.target
+
+[Service]
+Type=simple
+ExecStart={layman_path}
+Restart=on-failure
+RestartSec=3
+
+[Install]
+WantedBy=graphical-session.target
+"""
+
+    with open(service_file, "w") as f:
+        f.write(service_content)
+
+    print(f"Created systemd service: {service_file}")
+    print()
+    print("To enable and start the service:")
+    print("  systemctl --user daemon-reload")
+    print("  systemctl --user enable layman")
+    print("  systemctl --user start layman")
+    print()
+    print("Then remove 'exec layman' from your sway config and reload sway.")
+    print()
+    print("To check status:")
+    print("  systemctl --user status layman")
+    print("  journalctl --user -u layman -f")
+
+
+def init_config(force: bool = False) -> None:
+    """Create an example configuration file."""
+    if DEFAULT_CONFIG_PATH.exists() and not force:
+        print(f"Config file already exists: {DEFAULT_CONFIG_PATH}", file=sys.stderr)
+        print("Use 'layman init-config --force' to overwrite", file=sys.stderr)
+        sys.exit(1)
+
+    created_path = create_example_config()
+    print(f"Created example config: {created_path}")
+    print()
+    print("Edit this file to configure your layouts, then restart layman.")
+
+
 def main():
     """Application entry point."""
 
@@ -99,6 +215,15 @@ def main():
         # Decision #16: Handle help command
         if command in ("help", "--help", "-h"):
             print(HELP_TEXT)
+            return
+
+        # Handle service management commands
+        if command == "install-service":
+            install_service()
+            return
+
+        if command == "init-config" or command == "init-config --force":
+            init_config(force="--force" in command)
             return
 
         # Decision #15: Handle status command
