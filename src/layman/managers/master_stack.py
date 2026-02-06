@@ -528,39 +528,63 @@ class MasterStackLayoutManager(WorkspaceLayoutManager):
             self.log("noop move. likely a bug.")
             return
 
+        if self.maximized:
+            self._moveWindowMaximized(window, sourceIndex, targetIndex)
+        else:
+            skipSubstackRebalance = self._moveWindowNormal(
+                window, sourceIndex, targetIndex
+            )
+            if self.substackExists and not skipSubstackRebalance:
+                self._rebalanceSubstackAfterMove(window, sourceIndex, targetIndex)
+
+        self.windowIds.remove(window.id)
+        self.windowIds.insert(targetIndex, window.id)
+        self.log(f"window ids: {self.windowIds}")
+
+    def _moveWindowMaximized(self, window: Con, sourceIndex: int, targetIndex: int):
+        """Handle window movement when in maximized (tabbed) mode."""
+        if targetIndex == 0:
+            self.moveWindowCommand(window.id, self.windowIds[0])
+            self.swapWindowsCommand(window.id, self.windowIds[0])
+        else:
+            if targetIndex < sourceIndex:
+                moveTarget = targetIndex - 1
+            else:
+                moveTarget = targetIndex
+            self.moveWindowCommand(window.id, self.windowIds[moveTarget])
+
+    def _moveWindowNormal(
+        self, window: Con, sourceIndex: int, targetIndex: int
+    ) -> bool:
+        """Handle window movement in normal (non-maximized) mode.
+
+        Returns True if substack rebalancing should be skipped.
+        """
         masterId = self.windowIds[0]
         topOfStackId = self.windowIds[1]
-        substackRebalanced = False
-        if self.maximized:
-            if targetIndex == 0:
-                self.moveWindowCommand(window.id, self.windowIds[0])
-                self.swapWindowsCommand(window.id, self.windowIds[0])
-            else:
-                if targetIndex < sourceIndex:
-                    moveTarget = targetIndex - 1
-                else:
-                    moveTarget = targetIndex
-                self.moveWindowCommand(window.id, self.windowIds[moveTarget])
-        elif (sourceIndex == 0 and targetIndex == 1) or (
+
+        if (sourceIndex == 0 and targetIndex == 1) or (
             sourceIndex == 1 and targetIndex == 0
         ):
+            # Direct swap between master and top of stack
             self.swapWindowsCommand(masterId, topOfStackId)
-        elif sourceIndex == 0:  # Master is source
+        elif sourceIndex == 0:
+            # Master moving into stack
             self.swapWindowsCommand(topOfStackId, masterId)
             self.moveWindowCommand(masterId, self.windowIds[targetIndex])
-        elif targetIndex == 0:  # Master is target
+        elif targetIndex == 0:
+            # Stack window becoming master
             self.swapWindowsCommand(masterId, self.windowIds[sourceIndex])
             self.moveWindowCommand(masterId, self.windowIds[1])
             self.swapWindowsCommand(masterId, self.windowIds[1])
-        elif sourceIndex - targetIndex in {-1, 1}:  # Neighbors
-            # Moving 1 position in either direction
+        elif sourceIndex - targetIndex in {-1, 1}:
+            # Neighbors: simple swap, substack stays balanced
             self.swapWindowsCommand(
                 self.windowIds[sourceIndex], self.windowIds[targetIndex]
             )
-            # Because we just swapped the windows, the substack remains balanced, and we can skip
-            # rebalancing below.
-            substackRebalanced = True
-        elif targetIndex == 1:  # Top of stack from in the stack
+            return True  # skip substack rebalance
+        elif targetIndex == 1:
+            # Moving to top of stack from deeper in stack
             self.moveWindowCommand(self.windowIds[sourceIndex], topOfStackId)
             self.swapWindowsCommand(self.windowIds[sourceIndex], topOfStackId)
         elif (
@@ -569,49 +593,42 @@ class MasterStackLayoutManager(WorkspaceLayoutManager):
             and sourceIndex > self.visibleStackLimit
         ):
             # Top of substack from within the substack
-            self.moveWindowCommand(
-                window.id,
-                self.windowIds[targetIndex],
-            )
-            self.swapWindowsCommand(
-                window.id,
-                self.windowIds[targetIndex],
-            )
+            self.moveWindowCommand(window.id, self.windowIds[targetIndex])
+            self.swapWindowsCommand(window.id, self.windowIds[targetIndex])
         else:
+            # General case
             self.moveWindowCommand(
                 window.id,
                 self.windowIds[
                     targetIndex if sourceIndex < targetIndex else targetIndex - 1
                 ],
             )
+        return False
 
-        if self.substackExists and not substackRebalanced:
-            if (
-                sourceIndex >= self.visibleStackLimit
-                and targetIndex < self.visibleStackLimit
-            ):
-                # A substack window is being moved out of the substack, so we need to demote a
-                # window to refill the substack.
-                lastVisibleStack = self.windowIds[self.visibleStackLimit - 1]
-                firstSubstack = self.windowIds[self.visibleStackLimit]
-                if firstSubstack == window.id:
-                    firstSubstack = self.windowIds[self.visibleStackLimit + 1]
-                self.moveWindowCommand(lastVisibleStack, firstSubstack)
-                self.swapWindowsCommand(lastVisibleStack, firstSubstack)
+    def _rebalanceSubstackAfterMove(
+        self, window: Con, sourceIndex: int, targetIndex: int
+    ):
+        """Rebalance visible stack and substack after a window move."""
+        if (
+            sourceIndex >= self.visibleStackLimit
+            and targetIndex < self.visibleStackLimit
+        ):
+            # Window moved out of substack — demote a visible stack window
+            lastVisibleStack = self.windowIds[self.visibleStackLimit - 1]
+            firstSubstack = self.windowIds[self.visibleStackLimit]
+            if firstSubstack == window.id:
+                firstSubstack = self.windowIds[self.visibleStackLimit + 1]
+            self.moveWindowCommand(lastVisibleStack, firstSubstack)
+            self.swapWindowsCommand(lastVisibleStack, firstSubstack)
 
-            if (
-                sourceIndex < self.visibleStackLimit
-                and targetIndex >= self.visibleStackLimit
-            ):
-                # A non-substack-window was added to the substack, so we need to promote a window
-                # from the substack to refill the visible stack.
-                lastVisibleStack = self.windowIds[self.visibleStackLimit - 1]
-                firstSubstack = self.windowIds[self.visibleStackLimit]
-                self.moveWindowCommand(firstSubstack, lastVisibleStack)
-
-        self.windowIds.remove(window.id)
-        self.windowIds.insert(targetIndex, window.id)
-        self.log(f"window ids: {self.windowIds}")
+        if (
+            sourceIndex < self.visibleStackLimit
+            and targetIndex >= self.visibleStackLimit
+        ):
+            # Window moved into substack — promote a substack window
+            lastVisibleStack = self.windowIds[self.visibleStackLimit - 1]
+            firstSubstack = self.windowIds[self.visibleStackLimit]
+            self.moveWindowCommand(firstSubstack, lastVisibleStack)
 
     def moveWindowRelative(self, window: Con, delta: int):
         sourceIndex = self.getWindowListIndex(window)
@@ -664,36 +681,53 @@ class MasterStackLayoutManager(WorkspaceLayoutManager):
         isMaster = window.id == self.windowIds[0]
 
         if self.maximized:
-            if toSide == Side.RIGHT:
-                targetIndex = sourceIndex + 1
-            else:
-                targetIndex = sourceIndex - 1
-            targetIndex %= len(self.windowIds)
-            self.moveWindowToIndex(window, targetIndex)
-            return
+            self._moveHorizontalMaximized(window, sourceIndex, toSide)
+        elif self.stackLayout in (StackLayout.TABBED, StackLayout.SPLITH):
+            self._moveHorizontalInHorizontalStack(
+                workspace, window, sourceIndex, isMaster, toSide
+            )
+        else:
+            self._moveHorizontalInVerticalStack(window, isMaster, toSide)
 
-        if self.stackLayout in (StackLayout.TABBED, StackLayout.SPLITH):
-            if self.stackSide == Side.LEFT:
-                # Master towards the stack, or bottom of stack away from the stack
-                if (self.stackSide == toSide and isMaster) or (
-                    self.stackSide != toSide
-                    and (sourceIndex + 1) == len(self.windowIds)
-                ):
-                    master = workspace.find_by_id(self.windowIds[0])
-                    bottomOfStack = workspace.find_by_id(self.windowIds[-1])
-                    assert master and bottomOfStack
-                    self.swapWindows(master, bottomOfStack)
-                    return
+    def _moveHorizontalMaximized(self, window: Con, sourceIndex: int, toSide: Side):
+        """Move window left/right when maximized (all tabbed)."""
+        if toSide == Side.RIGHT:
+            targetIndex = sourceIndex + 1
+        else:
+            targetIndex = sourceIndex - 1
+        targetIndex %= len(self.windowIds)
+        self.moveWindowToIndex(window, targetIndex)
 
-                # Master away from the stack, or top of stack away from the stack
-                if (isMaster and self.stackSide != toSide) or (
-                    sourceIndex == 1 and self.stackSide == toSide
-                ):
-                    return
+    def _moveHorizontalInHorizontalStack(
+        self,
+        workspace: Con,
+        window: Con,
+        sourceIndex: int,
+        isMaster: bool,
+        toSide: Side,
+    ):
+        """Move window left/right when stack layout is tabbed or splith."""
+        if self.stackSide == Side.LEFT:
+            # Master towards the stack, or bottom of stack away from the stack
+            if (self.stackSide == toSide and isMaster) or (
+                self.stackSide != toSide and (sourceIndex + 1) == len(self.windowIds)
+            ):
+                master = workspace.find_by_id(self.windowIds[0])
+                bottomOfStack = workspace.find_by_id(self.windowIds[-1])
+                assert master and bottomOfStack
+                self.swapWindows(master, bottomOfStack)
+                return
 
-            self.moveWindowRelative(window, -1 if toSide == Side.LEFT else 1)
-            return
+            # Master away from the stack, or top of stack away from the stack
+            if (isMaster and self.stackSide != toSide) or (
+                sourceIndex == 1 and self.stackSide == toSide
+            ):
+                return
 
+        self.moveWindowRelative(window, -1 if toSide == Side.LEFT else 1)
+
+    def _moveHorizontalInVerticalStack(self, window: Con, isMaster: bool, toSide: Side):
+        """Move window left/right when stack layout is splitv or stacking."""
         if self.stackSide == toSide and isMaster:
             self.moveWindowToIndex(window, 1)
         elif self.stackSide != toSide and not isMaster:
