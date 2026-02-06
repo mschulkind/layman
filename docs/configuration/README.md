@@ -10,6 +10,9 @@ This section documents layman's configuration system.
 | [options.md](options.md) | Quick-reference option summary table |
 | [examples.md](examples.md) | Example configurations for common setups |
 | [sway-integration.md](sway-integration.md) | Sway/i3 keybinding integration |
+| [window-rules.md](window-rules.md) | Automatic window rules (float, exclude, move) |
+| [session-management.md](session-management.md) | Session save/restore |
+| [presets.md](presets.md) | Layout presets |
 
 ## Configuration File Location
 

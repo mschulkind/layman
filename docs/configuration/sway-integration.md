@@ -44,27 +44,34 @@ bindsym $mod+Shift+k nop layman window move up
 bindsym $mod+Shift+l nop layman window move right
 ```
 
-### MasterStack Commands
+### MasterStack / ThreeColumn Commands
 
 ```
 # Swap focused with master
 bindsym $mod+Return nop layman window swap master
 
 # Focus master
-bindsym $mod+m nop layman window focus master
+bindsym $mod+space nop layman window focus master
 
-# Toggle stack layout (splitv -> tabbed -> stacking)
+# Toggle stack layout (splitv → splith → stacking → tabbed)
 bindsym $mod+t nop layman stack toggle
 
-# Toggle stack side (left <-> right)
+# Toggle stack side (left ↔ right)
 bindsym $mod+y nop layman stack side toggle
+
+# Multi-master: add/remove master windows
+bindsym $mod+equal nop layman master add
+bindsym $mod+minus nop layman master remove
 
 # Rotate windows
 bindsym $mod+r nop layman window rotate cw
 bindsym $mod+Shift+r nop layman window rotate ccw
 
-# Maximize toggle
+# Fake fullscreen
 bindsym $mod+f nop layman layout maximize
+
+# Focus previous window (per-workspace history)
+bindsym $mod+Tab nop layman window focus previous
 ```
 
 ### Configuration Reload
@@ -117,20 +124,42 @@ exec layman
 bindsym $mod+a nop layman layout set Autotiling
 bindsym $mod+m nop layman layout set MasterStack
 bindsym $mod+g nop layman layout set Grid
+bindsym $mod+t nop layman layout set ThreeColumn
+bindsym $mod+p nop layman layout set TabbedPairs
 
-# MasterStack controls
-bindsym $mod+Return nop layman window swap master
-bindsym $mod+t nop layman stack toggle
-bindsym $mod+r nop layman window rotate cw
-bindsym $mod+Shift+r nop layman window rotate ccw
-
-# Movement overrides
+# Window movement
 bindsym $mod+Shift+Left nop layman window move left
 bindsym $mod+Shift+Down nop layman window move down
 bindsym $mod+Shift+Up nop layman window move up
 bindsym $mod+Shift+Right nop layman window move right
 
-# Reload
+# Window focus
+bindsym $mod+Left nop layman window focus left
+bindsym $mod+Down nop layman window focus down
+bindsym $mod+Up nop layman window focus up
+bindsym $mod+Right nop layman window focus right
+
+# MasterStack / ThreeColumn controls
+bindsym $mod+Return nop layman window swap master
+bindsym $mod+space nop layman window focus master
+bindsym $mod+equal nop layman master add
+bindsym $mod+minus nop layman master remove
+
+# Stack controls
+bindsym $mod+s nop layman stack toggle
+bindsym $mod+y nop layman stack side toggle
+
+# Fake fullscreen
+bindsym $mod+f nop layman layout maximize
+
+# Focus history
+bindsym $mod+Tab nop layman window focus previous
+
+# Session management
+bindsym $mod+Shift+s nop layman session save default
+bindsym $mod+Shift+r nop layman session restore default
+
+# Reload config
 bindsym $mod+Shift+c nop layman reload
 ```
 

@@ -33,6 +33,7 @@ from setproctitle import setproctitle
 
 from layman import config, utils
 from layman.config import ConfigError
+from layman.focus_history import FocusHistory
 from layman.listener import ListenerThread
 from layman.log import get_logger, setup_logging
 from layman.managers import (
@@ -44,6 +45,8 @@ from layman.managers import (
     WorkspaceLayoutManager,
 )
 from layman.perf import CommandBatcher, EventDebouncer, TreeCache
+from layman.presets import PresetManager
+from layman.rules import WindowRuleEngine
 from layman.server import MessageServer
 from layman.session import SessionManager
 
@@ -57,6 +60,8 @@ class WorkspaceState:
     # The set of all window IDs on the workspace, including floating windows.
     windowIds: set[int] = field(default_factory=set)
     isExcluded: bool = False
+    # Per-workspace focus history
+    focusHistory: FocusHistory = field(default_factory=FocusHistory)
     # Fake fullscreen state (global, works with any layout)
     fakeFullscreen: bool = False
     fakeFullscreenWindowId: int | None = None
@@ -108,6 +113,17 @@ class Layman:
 
         self.fetchUserLayouts()
 
+        # Initialize window rule engine from config
+        self._loadRules()
+
+    def _loadRules(self) -> None:
+        """Load window rules from config (top-level [[rules]] array)."""
+        rules_config = self.options.configDict.get("rules", [])
+        if isinstance(rules_config, list):
+            self.ruleEngine = WindowRuleEngine.from_config(rules_config)
+        else:
+            self.ruleEngine = WindowRuleEngine()
+
     """
     Window Events
 
@@ -132,6 +148,26 @@ class Layman:
         state.windowIds.add(window.id)
         self.log(f"Adding window ID {window.id} to workspace {workspace.name}")
         self.log(f"Workspace {workspace.name} window ids: {state.windowIds}")
+
+        # Evaluate window rules before passing to layout manager
+        if hasattr(self, "ruleEngine") and self.ruleEngine.rules:
+            actions = self.ruleEngine.evaluate(window)
+            if actions.get("exclude"):
+                self.log(f"Window {window.id} excluded by rule")
+                state.windowIds.discard(window.id)
+                return
+            if actions.get("floating"):
+                self.log(f"Window {window.id} floated by rule")
+                self.command(f"[con_id={window.id}] floating enable")
+                return
+            if actions.get("workspace"):
+                target_ws = actions["workspace"]
+                self.log(f"Window {window.id} moved to workspace {target_ws} by rule")
+                self.command(
+                    f"[con_id={window.id}] move container to workspace {target_ws}"
+                )
+                return
+
         self.handleWindowAdded(event, workspace, window)
 
     def windowFocused(
@@ -167,6 +203,9 @@ class Layman:
                 focused_workspace_window.id if focused_workspace_window else None,
             )
             return
+
+        # Track focus history
+        state.focusHistory.push(window.id)
 
         # Pass command to the appropriate manager
         if state.layoutManager:
@@ -214,6 +253,9 @@ class Layman:
             f"Removing window ID {event.container.id} from workspace {workspaceName}"
         )
         self.log(f"Workspace {workspaceName} window ids: {state.windowIds}")
+
+        # Remove from focus history
+        state.focusHistory.remove(event.container.id)
 
         # If the fake-fullscreened window was closed, exit fake fullscreen
         if state.fakeFullscreen and state.fakeFullscreenWindowId == event.container.id:
@@ -358,6 +400,7 @@ class Layman:
             self.options = config.LaymanConfig(utils.getConfigPath())
             setup_logging(self.options)
             self.fetchUserLayouts()
+            self._loadRules()
             self.log("Reloaded layman config")
             return
 
@@ -365,7 +408,10 @@ class Layman:
         if command.startswith("session "):
             self._handleSessionCommand(command[len("session ") :])
             return
-
+        # Handle preset commands (no focused workspace needed)
+        if command.startswith("preset "):
+            self._handlePresetCommand(command[len("preset ") :])
+            return
         workspace = utils.findFocusedWorkspace(self.conn)
         if not workspace or self.workspaceStates[workspace.name].isExcluded:
             self.command(command)
@@ -388,6 +434,15 @@ class Layman:
         # Route "window <subcommand>" → strip prefix, pass to manager
         if command.startswith("window "):
             manager_command = command[len("window ") :]
+            # Handle 'focus previous' via focus history (works with any layout)
+            if manager_command == "focus previous":
+                prev_id = state.focusHistory.previous()
+                if prev_id:
+                    self.command(f"[con_id={prev_id}] focus")
+                    self.log(f"Focus previous: window {prev_id}")
+                else:
+                    self.log("No previous window in focus history")
+                return
             # Check move/focus overrides
             if (
                 manager_command.startswith("move")
@@ -733,6 +788,51 @@ class Layman:
             self.sessionManager.delete(name)
         else:
             self.logError(f"Unknown session command: '{subcommand}'")
+
+    def _handlePresetCommand(self, subcommand: str) -> None:
+        """Handle preset save/load/list/delete commands.
+
+        Presets save the current workspace's layout name and options so you
+        can quickly switch between named configurations.
+        """
+        if not hasattr(self, "presetManager"):
+            presets_dir = os.path.join(
+                os.path.dirname(utils.getConfigPath()), "presets"
+            )
+            self.presetManager = PresetManager(presets_dir)
+
+        parts = subcommand.strip().split(maxsplit=1)
+        action = parts[0] if parts else ""
+        name = parts[1] if len(parts) > 1 else ""
+
+        if action == "save" and name:
+            workspace = utils.findFocusedWorkspace(self.conn)
+            if workspace and workspace.name in self.workspaceStates:
+                state = self.workspaceStates[workspace.name]
+                self.presetManager.save(name, state.layoutName)
+                self.log(f"Preset saved: {name}")
+            else:
+                self.logError("No focused workspace for preset save")
+        elif action == "load" and name:
+            preset = self.presetManager.load(name)
+            if preset:
+                workspace = utils.findFocusedWorkspace(self.conn)
+                if workspace:
+                    self.setWorkspaceLayout(
+                        workspace, workspace.name, preset.layout_name
+                    )
+                    self.log(f"Preset loaded: {name} ({preset.layout_name})")
+                else:
+                    self.logError("No focused workspace for preset load")
+            else:
+                self.logError(f"Preset not found: {name}")
+        elif action == "list":
+            presets = self.presetManager.list_presets()
+            self.log(f"Presets: {', '.join(presets) if presets else '(none)'}")
+        elif action == "delete" and name:
+            self.presetManager.delete(name)
+        else:
+            self.logError(f"Unknown preset command: '{subcommand}'")
 
     def logError(self, msg):
         logger.error(msg, stacklevel=2)

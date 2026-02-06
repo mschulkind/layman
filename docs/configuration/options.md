@@ -26,6 +26,31 @@ This is a summary of all available options. For a comprehensive reference with e
 | `stackSide` | string | `"right"` | Stack position: `left` or `right` |
 | `visibleStackLimit` | int | `3` | Max visible stack windows before substack (0 = disabled) |
 
+## ThreeColumn Options
+
+| Option | Type | Default | Description |
+|--------|------|---------|-------------|
+| `masterWidth` | int or float | `50` | Master column width as percentage (0–100 exclusive) |
+| `stackLayout` | string | `"splitv"` | Layout for both stack columns |
+| `balanceStacks` | bool | `true` | Auto-balance windows between left and right stacks |
+
+## TabbedPairs Options
+
+| Option | Type | Default | Description |
+|--------|------|---------|-------------|
+| `pairRules` | table | `{}` | Auto-pairing rules: `{app_id = [partner_ids...]}` |
+
+## Window Rules (top-level `[[rules]]`)
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `match_app_id` | string | Match by Wayland app_id (case-insensitive substring) |
+| `match_window_class` | string | Match by X11 window_class |
+| `match_title` | string | Match by window title |
+| `floating` | bool | Enable floating for matched windows |
+| `exclude` | bool | Exclude from layout management |
+| `workspace` | string | Move to specified workspace |
+
 ## Workspace Overrides (`[workspace.<name>]`)
 
 All options from `[layman]` can be overridden per workspace:
@@ -49,6 +74,8 @@ defaultLayout = "none"
 | `Autotiling` | Spiral tiling based on window dimensions |
 | `MasterStack` | Master window + configurable stack |
 | `Grid` | Grid tiling by splitting the largest window |
+| `ThreeColumn` | Center master + two side stacks |
+| `TabbedPairs` | Windows grouped in tabbed pairs |
 
 Sway/i3 native layouts (`splitv`, `splith`, `tabbed`, `stacking`) can also be set directly.
 
