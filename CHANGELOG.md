@@ -8,9 +8,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased] — 2026-02-06
 
-Major refactoring, bug fixes, and a breaking command naming change.
-Phases 0–3 of the [task list](docs/roadmap/task-list.md) are complete.
-Test suite grew from 0 to 278 unit tests.
+Major refactoring, bug fixes, new layouts, and a breaking command naming change.
+All 52 tasks across 11 phases of the [task list](docs/roadmap/task-list.md)
+are complete. Test suite grew from 0 to 439 unit tests.
 
 ### Breaking Changes
 
@@ -73,6 +73,60 @@ Test suite grew from 0 to 278 unit tests.
 
 ### Features
 
+- **Three-Column layout** (Phase 4). New `ThreeColumnLayoutManager` with
+  master in center, left stack, and right stack. Supports `move left/right`,
+  `move to master`, `swap master`, `focus left/right`, and `balance` commands.
+  Config: `masterWidth`, `stackLayout`, `balanceStacks`. Handles 1–2 window
+  edge cases (single fills workspace, two → master + one column).
+
+- **Fake fullscreen generalized** (Phase 5). `layout maximize` now works with
+  any layout (not just MasterStack). Toggles all workspace windows into a
+  tabbed container. Properly handles window creation/removal while maximized.
+  State tracked per-workspace via `WorkspaceState.fakeFullscreen`.
+
+- **Tabbed Pairs layout** (Phase 6). New `TabbedPairsLayoutManager` that
+  auto-pairs windows by `app_id` (e.g., editor + terminal). Navigation between
+  pairs with `focus left/right`, within pairs with `focus up/down`. Manual
+  `pair`/`unpair` commands. Configurable pair rules via `pairRules` config.
+
+- **Command batching** (Phase 7). `CommandBatcher` context manager joins
+  multiple Sway IPC commands with semicolons into a single round-trip.
+  Estimated 50–75% reduction in IPC calls during layout operations.
+
+- **Tree cache** (Phase 7). `TreeCache` maintains a `window_id → workspace_name`
+  mapping to avoid calling `get_tree()` on every window event. Invalidated
+  automatically on workspace/window events.
+
+- **Event debouncing** (Phase 7). `EventDebouncer` collects rapid events within
+  a configurable window (default 10ms) and deduplicates them, preventing
+  redundant layout recalculations during bursts.
+
+- **Session save/restore** (Phase 8). Save workspace layouts and window
+  positions to JSON. Restore by matching windows via `app_id` or `window_class`.
+  Optional application launch on restore. Commands: `session save`,
+  `session restore`, `session list`, `session delete`.
+
+- **Multi-master support** (Phase 9). MasterStack now supports multiple master
+  windows that split vertically. Config: `masterCount` (default 1). Commands:
+  `master add`, `master remove`. Works with existing arrange logic via
+  post-arrangement vertical splitting.
+
+- **Focus history** (Phase 10). Per-workspace `FocusHistory` with
+  push/previous/remove/clear. Tracks window focus order with configurable
+  max size and deduplication.
+
+- **Layout manager factory** (Phase 10). `LayoutManagerFactory` with registry
+  pattern for cleaner layout registration and instantiation.
+
+- **Layout presets** (Phase 10). Save and load named workspace layout
+  configurations. `PresetManager` persists presets as JSON files.
+  Commands: `preset save`, `preset load`, `preset list`, `preset delete`.
+
+- **Window rules** (Phase 10). `WindowRuleEngine` matches windows by
+  `app_id`/`window_class` regex patterns and applies actions (exclude from
+  layout, float, assign workspace, set position). Configurable via `[rules]`
+  config section.
+
 - **Structured logging system** (Task 9a). New `layman.log` module with
   `get_logger()` and `setup_logging()`. Per-module named loggers, configurable
   log levels via config file, CLI override support. Replaces all ad-hoc
@@ -116,6 +170,16 @@ Test suite grew from 0 to 278 unit tests.
 
 ### Refactoring
 
+- **Google-style API docstrings** (Task 34). Full docstrings on
+  `WorkspaceLayoutManager` base class and all public methods.
+
+- **Graceful error recovery** (Task 35). Event handlers and command dispatch
+  wrapped in try/except with structured error logging. Daemon no longer crashes
+  on individual event or command failures.
+
+- **`ty` strict mode** (Task 36). Added `possibly-unbound = "error"` to
+  `ty.toml`. All core code is type-checked; only `i3ipc` stub warnings remain.
+
 - **`isExcluded()` extracted to base class** (Task 3). Autotiling and Grid had
   identical 25-line methods. Now lives in `WorkspaceLayoutManager` for all
   layouts to share.
@@ -141,8 +205,10 @@ Test suite grew from 0 to 278 unit tests.
 
 ### Infrastructure
 
-- **278 unit tests** with pytest. Comprehensive coverage of all layout managers,
-  config parsing, command routing, logging, server, listener, and utilities.
+- **439 unit tests** with pytest. Comprehensive coverage of all layout managers
+  (MasterStack, Autotiling, Grid, ThreeColumn, TabbedPairs), config parsing,
+  command routing, logging, server, listener, session restore, performance
+  utilities, focus history, factory, presets, window rules, and utilities.
 
 - **Test mocks** for `i3ipc.Connection`, `Con`, `CommandReply`, and all event
   types in `tests/mocks/i3ipc_mocks.py`.
