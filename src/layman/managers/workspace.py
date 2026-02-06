@@ -16,6 +16,7 @@ You should have received a copy of the GNU General Public License along with
 layman. If not, see <https://www.gnu.org/licenses/>.
 """
 
+import logging
 from typing import ClassVar
 
 import i3ipc
@@ -40,6 +41,7 @@ class WorkspaceLayoutManager:
 
     con: i3ipc.Connection
     workspaceName: str
+    logger: logging.Logger
 
     # These are the functions you should override to implement a WLM.
     #
@@ -69,7 +71,7 @@ class WorkspaceLayoutManager:
     # either by being created on the workspace or moved to it from another.
     def windowAdded(
         self, event: i3ipc.WindowEvent, workspace: i3ipc.Con, window: i3ipc.Con
-    ):
+    ) -> None:
         pass
 
     # windowRemoved is called when a window is removed from the workspace,
@@ -81,31 +83,31 @@ class WorkspaceLayoutManager:
         event: i3ipc.WindowEvent,
         workspace: i3ipc.Con | None,
         window: i3ipc.Con,
-    ):
+    ) -> None:
         pass
 
     # windowFocused is called when a window on the workspace is focused.
     def windowFocused(
         self, event: i3ipc.WindowEvent, workspace: i3ipc.Con, window: i3ipc.Con
-    ):
+    ) -> None:
         pass
 
     # windowMoved is called when a window is moved, but stays on the same
     # workspace.
     def windowMoved(
         self, event: i3ipc.WindowEvent, workspace: i3ipc.Con, window: i3ipc.Con
-    ):
+    ) -> None:
         pass
 
     # windowFloating is called when a window's floating state is toggled.
     def windowFloating(
         self, event: i3ipc.WindowEvent, workspace: i3ipc.Con, window: i3ipc.Con
-    ):
+    ) -> None:
         pass
 
     # onCommand is called when a layman command is executed while the workspace
     # is focused, whether the command was from a key binding or the layman cli.
-    def onCommand(self, command: str, workspace: i3ipc.Con):
+    def onCommand(self, command: str, workspace: i3ipc.Con) -> None:
         pass
 
     # isExcluded checks if a window should be skipped by layout logic.
@@ -136,7 +138,7 @@ class WorkspaceLayoutManager:
         return False
 
     # command is used by the layout manager itself to run commands.
-    def command(self, command: str):
+    def command(self, command: str) -> None:
         self.logger.debug("Running command: %s", command, stacklevel=2)
         results = self.con.command(command)
         for result in results:
