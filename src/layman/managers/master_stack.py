@@ -230,13 +230,35 @@ class MasterStackLayoutManager(WorkspaceLayoutManager):
     def onCommand(self, command, workspace):
         self.log(f"received command '{command}' with window ids {self.windowIds}")
 
+        # Commands that don't require the focused window to be tracked
+        dispatch_no_focus = {
+            "focus up": lambda: self.focusWindowRelative(workspace, -1),
+            "focus down": lambda: self.focusWindowRelative(workspace, 1),
+            "focus master": lambda: self.command(f"[con_id={self.windowIds[0]}] focus"),
+            "toggle": lambda: self.toggleStackLayout(),
+            "side toggle": lambda: self.toggleStackSide(workspace),
+            "maximize": lambda: self.toggleMaximize(workspace),
+            "master add": lambda: self._addMaster(workspace),
+            "master remove": lambda: self._removeMaster(workspace),
+        }
+
+        handler = dispatch_no_focus.get(command)
+        if handler:
+            handler()
+            return
+
         focused = workspace.find_focused()
         if not focused:
             self.log("no focused window, ignoring")
             return
-        assert focused.id in self.windowIds
+        if focused.id not in self.windowIds:
+            self.log(
+                f"focused window {focused.id} not in tracked window ids "
+                f"{self.windowIds}, ignoring"
+            )
+            return
 
-        # Dispatch table for simple commands
+        # Commands that require the focused window to be tracked
         dispatch = {
             "move up": lambda: self.moveWindowRelative(focused, -1),
             "move down": lambda: self.moveWindowRelative(focused, 1),
@@ -247,17 +269,9 @@ class MasterStackLayoutManager(WorkspaceLayoutManager):
                 workspace, focused, Side.LEFT
             ),
             "move to master": lambda: self.moveWindowToIndex(focused, 0),
-            "focus up": lambda: self.focusWindowRelative(workspace, -1),
-            "focus down": lambda: self.focusWindowRelative(workspace, 1),
-            "focus master": lambda: self.command(f"[con_id={self.windowIds[0]}] focus"),
             "rotate ccw": lambda: self.rotateWindows(workspace, "ccw"),
             "rotate cw": lambda: self.rotateWindows(workspace, "cw"),
             "swap master": lambda: self._swapWithMaster(workspace, focused),
-            "toggle": lambda: self.toggleStackLayout(),
-            "side toggle": lambda: self.toggleStackSide(workspace),
-            "maximize": lambda: self.toggleMaximize(workspace),
-            "master add": lambda: self._addMaster(workspace),
-            "master remove": lambda: self._removeMaster(workspace),
         }
 
         handler = dispatch.get(command)
@@ -824,11 +838,18 @@ class MasterStackLayoutManager(WorkspaceLayoutManager):
             self.moveWindowToIndex(window, 0)
 
     def focusWindowRelative(self, workspace: Con, delta: int):
-        assert self.lastFocusedWindowId
+        if not self.lastFocusedWindowId:
+            self.log("No last focused window, ignoring focus command")
+            return
         lastFocusedWindow = workspace.find_by_id(self.lastFocusedWindowId)
-        assert lastFocusedWindow
+        if not lastFocusedWindow:
+            self.log(
+                f"Last focused window {self.lastFocusedWindowId} not found in tree"
+            )
+            return
         sourceIndex = self.getWindowListIndex(lastFocusedWindow)
-        assert sourceIndex is not None
+        if sourceIndex is None:
+            return
         targetIndex = (sourceIndex + delta) % len(self.windowIds)
         self.command(f"[con_id={self.windowIds[targetIndex]}] focus")
 

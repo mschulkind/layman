@@ -939,3 +939,75 @@ class TestKnownBugs:
         assert len(resize_commands) > 0, (
             "New master should be resized using masterWidth ppt when no tracked width exists"
         )
+
+
+# =============================================================================
+# Regression Tests: Focused Window Not In WindowIds
+# =============================================================================
+
+
+class TestOnCommandFocusedNotTracked:
+    """Regression tests for the bug where onCommand asserts focused.id in windowIds.
+
+    Bug: When a floating window or container node has focus, workspace.find_focused()
+    returns a node whose id is not in the manager's windowIds list, causing an
+    AssertionError that crashes the layout manager and triggers a reload.
+
+    Fixed by converting the assert to a graceful early return with logging.
+    """
+
+    def test_focused_window_not_in_window_ids_no_crash(
+        self, mock_connection, minimal_config
+    ):
+        """Commands should not crash when focused window is not tracked."""
+        workspace = create_workspace(name="1", window_count=2)
+        manager = MasterStackLayoutManager(
+            mock_connection, workspace, "1", minimal_config
+        )
+        assert len(manager.windowIds) == 2
+
+        # Simulate a floating window having focus (not in windowIds)
+        floating_window = MockCon(id=999, name="floating")
+        workspace._focused = floating_window
+
+        # These commands should NOT raise AssertionError
+        for cmd in ["move up", "move down", "swap master", "focus up", "focus down"]:
+            manager.onCommand(cmd, workspace)  # Should log and return, not crash
+
+    def test_commands_without_focus_still_work(
+        self, mock_connection, minimal_config
+    ):
+        """Commands like toggle/maximize should work even with untracked focus."""
+        workspace = create_workspace(name="1", window_count=3)
+        manager = MasterStackLayoutManager(
+            mock_connection, workspace, "1", minimal_config
+        )
+
+        # Simulate untracked focused window
+        floating_window = MockCon(id=999, name="floating")
+        workspace._focused = floating_window
+
+        # These commands don't need the focused window to be in windowIds
+        manager.onCommand("toggle", workspace)
+        manager.onCommand("maximize", workspace)
+        manager.onCommand("master add", workspace)
+
+    def test_focus_master_with_untracked_focus(
+        self, mock_connection, minimal_config
+    ):
+        """'focus master' should work even if current focus is untracked."""
+        workspace = create_workspace(name="1", window_count=2)
+        manager = MasterStackLayoutManager(
+            mock_connection, workspace, "1", minimal_config
+        )
+        master_id = manager.windowIds[0]
+
+        # Focus an untracked window
+        workspace._focused = MockCon(id=999, name="floating")
+
+        manager.onCommand("focus master", workspace)
+
+        focus_cmds = [
+            c for c in mock_connection.commands_executed if f"con_id={master_id}] focus" in c
+        ]
+        assert len(focus_cmds) >= 1
