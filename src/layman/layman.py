@@ -45,6 +45,7 @@ from layman.managers import (
 )
 from layman.perf import CommandBatcher, EventDebouncer, TreeCache
 from layman.server import MessageServer
+from layman.session import SessionManager
 
 logger = get_logger(__name__)
 
@@ -358,6 +359,11 @@ class Layman:
             setup_logging(self.options)
             self.fetchUserLayouts()
             self.log("Reloaded layman config")
+            return
+
+        # Handle session commands (no focused workspace needed)
+        if command.startswith("session "):
+            self._handleSessionCommand(command[len("session ") :])
             return
 
         workspace = utils.findFocusedWorkspace(self.conn)
@@ -691,6 +697,31 @@ class Layman:
 
     def logCaller(self, msg):
         logger.debug(msg, stacklevel=3)
+
+    def _handleSessionCommand(self, subcommand: str) -> None:
+        """Handle session save/restore/list/delete commands."""
+        if not hasattr(self, "sessionManager"):
+            session_dir = os.path.join(
+                os.path.dirname(utils.getConfigPath()), "sessions"
+            )
+            self.sessionManager = SessionManager(self.conn, session_dir)
+
+        parts = subcommand.strip().split(maxsplit=1)
+        action = parts[0] if parts else ""
+        name = parts[1] if len(parts) > 1 else "default"
+
+        if action == "save":
+            path = self.sessionManager.save(name, self.workspaceStates)
+            self.log(f"Session saved to {path}")
+        elif action == "restore":
+            self.sessionManager.restore(name)
+        elif action == "list":
+            sessions = self.sessionManager.list_sessions()
+            self.log(f"Sessions: {', '.join(sessions) if sessions else '(none)'}")
+        elif action == "delete":
+            self.sessionManager.delete(name)
+        else:
+            self.logError(f"Unknown session command: '{subcommand}'")
 
     def logError(self, msg):
         logger.error(msg, stacklevel=2)
