@@ -1,4 +1,5 @@
 from .autotiling import AutotilingLayoutManager as AutotilingLayoutManager
 from .grid import GridLayoutManager as GridLayoutManager
 from .master_stack import MasterStackLayoutManager as MasterStackLayoutManager
+from .three_column import ThreeColumnLayoutManager as ThreeColumnLayoutManager
 from .workspace import WorkspaceLayoutManager as WorkspaceLayoutManager
