@@ -207,52 +207,57 @@ class MasterStackLayoutManager(WorkspaceLayoutManager):
             return
         assert focused.id in self.windowIds
 
-        if command == "move up":
-            self.moveWindowRelative(focused, -1)
-        elif command == "move down":
-            self.moveWindowRelative(focused, 1)
-        elif command == "move right":
-            self.moveWindowHorizontally(workspace, focused, Side.RIGHT)
-        elif command == "move left":
-            self.moveWindowHorizontally(workspace, focused, Side.LEFT)
-        elif command == "move to master":
-            self.moveWindowToIndex(focused, 0)
+        # Dispatch table for simple commands
+        dispatch = {
+            "move up": lambda: self.moveWindowRelative(focused, -1),
+            "move down": lambda: self.moveWindowRelative(focused, 1),
+            "move right": lambda: self.moveWindowHorizontally(
+                workspace, focused, Side.RIGHT
+            ),
+            "move left": lambda: self.moveWindowHorizontally(
+                workspace, focused, Side.LEFT
+            ),
+            "move to master": lambda: self.moveWindowToIndex(focused, 0),
+            "focus up": lambda: self.focusWindowRelative(workspace, -1),
+            "focus down": lambda: self.focusWindowRelative(workspace, 1),
+            "focus master": lambda: self.command(f"[con_id={self.windowIds[0]}] focus"),
+            "rotate ccw": lambda: self.rotateWindows(workspace, "ccw"),
+            "rotate cw": lambda: self.rotateWindows(workspace, "cw"),
+            "swap master": lambda: self._swapWithMaster(workspace, focused),
+            "stack toggle": lambda: self.toggleStackLayout(),
+            "stackside toggle": lambda: self.toggleStackSide(workspace),
+            "maximize": lambda: self.toggleMaximize(workspace),
+        }
+
+        handler = dispatch.get(command)
+        if handler:
+            handler()
         elif command.startswith("move to index"):
-            split = command.split(" ")
-            if len(split) == 4:
-                try:
-                    index = int(command.split(" ")[3])
-                    if index >= 0 and index < len(self.windowIds):
-                        self.moveWindowToIndex(focused, index)
-                    else:
-                        self.log(f"index {index} out of range.")
-                    return
-                except ValueError:
-                    pass
-            self.log("Usage: move to index <i>")
-        elif command == "focus up":
-            self.focusWindowRelative(workspace, -1)
-        elif command == "focus down":
-            self.focusWindowRelative(workspace, 1)
-        elif command == "rotate ccw":
-            self.rotateWindows(workspace, "ccw")
-        elif command == "rotate cw":
-            self.rotateWindows(workspace, "cw")
-        elif command == "swap master":
-            master = workspace.find_by_id(self.windowIds[0])
-            assert master
-            self.swapWindows(focused, master)
-        elif command == "stack toggle":
-            self.toggleStackLayout()
-        elif command == "stackside toggle":
-            self.toggleStackSide(workspace)
-        elif command == "focus master":
-            self.command(f"[con_id={self.windowIds[0]}] focus")
-        elif command == "maximize":
-            self.toggleMaximize(workspace)
+            self._handleMoveToIndex(command, focused)
         else:
             # Decision #4: Log unknown commands
             self.logError(f"Unknown command: '{command}'")
+
+    def _swapWithMaster(self, workspace, focused):
+        """Swap the focused window with master."""
+        master = workspace.find_by_id(self.windowIds[0])
+        assert master
+        self.swapWindows(focused, master)
+
+    def _handleMoveToIndex(self, command, focused):
+        """Handle 'move to index <n>' command."""
+        split = command.split(" ")
+        if len(split) == 4:
+            try:
+                index = int(split[3])
+                if 0 <= index < len(self.windowIds):
+                    self.moveWindowToIndex(focused, index)
+                else:
+                    self.log(f"index {index} out of range.")
+                return
+            except ValueError:
+                pass
+        self.log("Usage: move to index <i>")
 
     def isFloating(self, window: Con) -> bool:
         i3Floating = window.floating is not None and "on" in window.floating
