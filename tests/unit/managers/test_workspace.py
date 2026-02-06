@@ -216,3 +216,62 @@ class TestWorkspaceLayoutManagerLogging:
 
         captured = capsys.readouterr()
         assert "caller message" in captured.out
+
+
+class TestIsExcluded:
+    """Tests for isExcluded() method on the base class.
+
+    This method was extracted from Autotiling and Grid layout managers
+    where it was duplicated identically.
+    """
+
+    @pytest.fixture
+    def manager(self, mock_connection, minimal_config):
+        return WorkspaceLayoutManager(mock_connection, None, "1", minimal_config)
+
+    def test_isExcluded_noneWindow_returnsTrue(self, manager):
+        """None window should be excluded."""
+        assert manager.isExcluded(None) is True
+
+    def test_isExcluded_nonConType_returnsTrue(self, manager):
+        """Non-con types (e.g., workspace) should be excluded."""
+        window = MockCon(type="workspace")
+        assert manager.isExcluded(window) is True
+
+    def test_isExcluded_noWorkspace_returnsTrue(self, manager):
+        """Window with no workspace parent should be excluded."""
+        window = MockCon(type="con")
+        # window.workspace() returns None since no parent is a workspace
+        assert manager.isExcluded(window) is True
+
+    def test_isExcluded_floatingWindow_returnsTrue(self, manager):
+        """Floating windows should be excluded."""
+        workspace = MockCon(name="1", type="workspace")
+        window = MockCon(type="con", floating="auto_on", parent=workspace)
+        assert manager.isExcluded(window) is True
+
+    def test_isExcluded_fullscreenWindow_returnsTrue(self, manager):
+        """Fullscreen windows should be excluded."""
+        workspace = MockCon(name="1", type="workspace")
+        window = MockCon(type="con", fullscreen_mode=1, parent=workspace)
+        assert manager.isExcluded(window) is True
+
+    def test_isExcluded_stackedParent_returnsTrue(self, manager):
+        """Windows in a stacked parent should be excluded."""
+        workspace = MockCon(name="1", type="workspace")
+        parent = MockCon(type="con", layout="stacked", parent=workspace)
+        window = MockCon(type="con", parent=parent)
+        assert manager.isExcluded(window) is True
+
+    def test_isExcluded_tabbedParent_returnsTrue(self, manager):
+        """Windows in a tabbed parent should be excluded."""
+        workspace = MockCon(name="1", type="workspace")
+        parent = MockCon(type="con", layout="tabbed", parent=workspace)
+        window = MockCon(type="con", parent=parent)
+        assert manager.isExcluded(window) is True
+
+    def test_isExcluded_normalWindow_returnsFalse(self, manager):
+        """Normal tiled window should not be excluded."""
+        workspace = MockCon(name="1", type="workspace")
+        window = MockCon(type="con", parent=workspace)
+        assert manager.isExcluded(window) is False
