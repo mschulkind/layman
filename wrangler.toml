@@ -5,7 +5,7 @@ compatibility_date = "2026-02-01"
 directory = "site/dist"
 
 [build]
-command = "cd site && npm run build"
+command = "cd site && pnpm build"
 
 [env.production]
 # Specify exact runtime versions for production builds
