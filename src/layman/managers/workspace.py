@@ -17,7 +17,7 @@ layman. If not, see <https://www.gnu.org/licenses/>.
 """
 
 import logging
-from typing import ClassVar
+from typing import Any, ClassVar
 
 import i3ipc
 
@@ -162,6 +162,16 @@ class WorkspaceLayoutManager:
             command: The command string (already stripped of workspace prefix).
             workspace: The workspace container.
         """
+
+    def dumpState(self) -> dict[str, Any]:
+        """Return a dictionary of the manager's internal state for debugging.
+
+        Subclasses should override this to include their own specific state.
+        """
+        return {
+            "layout": self.shortName,
+            "workspaceName": self.workspaceName,
+        }
 
     def isExcluded(self, window: i3ipc.Con | None) -> bool:
         """Check if a window should be skipped by layout logic.
