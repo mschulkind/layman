@@ -18,7 +18,7 @@ run-debug:
 # ============== Quality ==============
 
 # Run all checks (format, lint, test)
-check: format lint test
+check: format lint test demo-check
     @echo "✓ All checks passed"
 
 # ============== Linting ==============
@@ -135,7 +135,7 @@ test-debug:
 # ============== Setup ==============
 
 # Install all dependencies
-setup: setup-python setup-node
+setup: setup-python setup-node setup-demo
     @echo "✓ Setup complete"
 
 # Setup Python environment
@@ -145,6 +145,11 @@ setup-python:
 # Setup Node.js dependencies for markdown linting
 setup-node:
     pnpm install
+
+# Setup the interactive demo
+setup-demo:
+    cd site/demo && npm install
+    cd site/demo && npx playwright install chromium
 
 # ============== Documentation ==============
 
@@ -203,6 +208,48 @@ clean:
     rm -rf dist/ build/ *.egg-info src/*.egg-info
     find . -type d -name __pycache__ -exec rm -rf {} + 2>/dev/null || true
     find . -type f -name "*.pyc" -delete
+
+# ============== Interactive Demo ==============
+
+# Run the interactive demo dev server
+demo-dev:
+    cd site/demo && npm run dev
+
+# Run demo unit tests (Vitest)
+demo-test:
+    cd site/demo && npm test
+
+# Run demo unit tests with coverage
+demo-test-cov:
+    cd site/demo && npm run test:coverage
+
+# Run demo E2E browser tests (Playwright)
+demo-test-e2e:
+    cd site/demo && npx playwright test
+
+# Run demo E2E tests in headed browser (visible)
+demo-test-e2e-headed:
+    cd site/demo && npx playwright test --headed
+
+# Run all demo tests (unit + E2E)
+demo-test-all: demo-test demo-test-e2e
+    @echo "✓ All demo tests passed"
+
+# Lint demo code
+demo-lint:
+    cd site/demo && npm run lint
+
+# Build the demo for production
+demo-build:
+    cd site/demo && npm run build
+
+# Preview the production demo build
+demo-preview:
+    cd site/demo && npm run build && npm run preview
+
+# Run all demo checks (lint + unit tests + E2E tests)
+demo-check: demo-lint demo-test demo-test-e2e
+    @echo "✓ All demo checks passed"
 
 # ============== Utilities ==============
 
