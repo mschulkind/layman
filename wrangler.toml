@@ -7,3 +7,8 @@ directory = "site/dist"
 [build]
 command = "cd site && npm run build"
 
+[env.production]
+# Specify exact runtime versions for production builds
+# Node 22, pnpm 9 (defined here instead of relying on unreliable
+# .tool-versions detection by Cloudflare)
+
