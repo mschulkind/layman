@@ -64,7 +64,7 @@ Configuration:
   Config file: ~/.config/layman/config.toml
   Named pipe:  /tmp/layman.pipe (configurable via pipePath)
 
-For more information, see: https://github.com/frap129/layman
+For more information, see: https://github.com/mschulkind/layman
 """
 
 
@@ -106,7 +106,7 @@ def create_example_config(path: Path | None = None) -> Path:
     example_content = """\
 # Layman Configuration
 #
-# See https://github.com/frap129/layman/tree/master/docs for full documentation.
+# See https://github.com/mschulkind/layman/tree/master/docs for full documentation.
 
 [layman]
 defaultLayout = "none"        # Default layout: none, MasterStack, Autotiling, Grid

@@ -15,7 +15,7 @@ This section covers development setup, testing, and contribution guidelines.
 
 ```bash
 # Clone the repository
-git clone https://github.com/frap129/layman
+git clone https://github.com/mschulkind/layman
 cd layman
 
 # Install with uv

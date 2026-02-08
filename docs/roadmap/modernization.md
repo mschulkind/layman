@@ -40,9 +40,9 @@ dependencies = [
 layman = "layman.__main__:main"
 
 [project.urls]
-Homepage = "https://github.com/frap129/layman"
-Repository = "https://github.com/frap129/layman"
-Documentation = "https://github.com/frap129/layman/tree/master/docs"
+Homepage = "https://github.com/mschulkind/layman"
+Repository = "https://github.com/mschulkind/layman"
+Documentation = "https://github.com/mschulkind/layman/tree/master/docs"
 
 [tool.uv]
 dev-dependencies = [
@@ -69,7 +69,7 @@ uv sync
 
 ```bash
 # Development
-git clone https://github.com/frap129/layman
+git clone https://github.com/mschulkind/layman
 cd layman
 uv sync
 uv run layman
