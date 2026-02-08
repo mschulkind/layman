@@ -7,6 +7,9 @@
     "dev": "astro dev",
     "build": "astro build",
     "preview": "astro preview",
+    "deploy": "npm run build && wrangler deploy",
+    "deploy:dry-run": "npm run build && wrangler deploy --dry-run",
+    "cf:dev": "npm run build && wrangler dev",
     "lint": "eslint .",
     "test": "vitest run",
     "test:watch": "vitest",
@@ -42,6 +45,7 @@
     "typescript": "~5.9.3",
     "typescript-eslint": "^8.46.4",
     "vite": "^7.2.4",
-    "vitest": "^4.0.16"
+    "vitest": "^4.0.16",
+    "wrangler": "^4.63.0"
   }
 }

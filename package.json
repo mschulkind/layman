@@ -4,7 +4,6 @@
   "private": true,
   "description": "Documentation tooling for layman",
   "scripts": {
-    "build": "cd site && npm install && npm run build",
     "lint:md": "markdownlint-cli2 'docs/**/*.md' '*.md'",
     "lint:md:fix": "markdownlint-cli2 --fix 'docs/**/*.md' '*.md'"
   },
