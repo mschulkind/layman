@@ -3,6 +3,9 @@ __pycache__/
 *.py[cod]
 *$py.class
 
+# External source code
+external/
+
 # Node.js
 node_modules/
 

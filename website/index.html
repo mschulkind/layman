@@ -1,0 +1,946 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Layman — Intelligent Layout Management for Sway & i3</title>
+    <meta name="description" content="Per-workspace tiling layouts that adapt to how you work. MasterStack, Autotiling, Grid, and custom layouts for Sway and i3.">
+    
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    
+    <style>
+        :root {
+            --bg-primary: #0a0a0f;
+            --bg-secondary: #12121a;
+            --bg-tertiary: #1a1a24;
+            --bg-card: #16161e;
+            --text-primary: #f0f0f5;
+            --text-secondary: #a0a0b0;
+            --text-muted: #6a6a7a;
+            --accent: #6366f1;
+            --accent-light: #818cf8;
+            --accent-glow: rgba(99, 102, 241, 0.3);
+            --border: #2a2a3a;
+            --success: #22c55e;
+            --code-bg: #1e1e2e;
+        }
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        html {
+            scroll-behavior: smooth;
+        }
+        
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            line-height: 1.6;
+            overflow-x: hidden;
+        }
+        
+        /* Navbar */
+        .navbar {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            z-index: 100;
+            padding: 1rem 2rem;
+            background: rgba(10, 10, 15, 0.8);
+            backdrop-filter: blur(12px);
+            border-bottom: 1px solid var(--border);
+        }
+        
+        .navbar-inner {
+            max-width: 1200px;
+            margin: 0 auto;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .logo {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--text-primary);
+            text-decoration: none;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        
+        .logo-icon {
+            width: 32px;
+            height: 32px;
+            background: linear-gradient(135deg, var(--accent), var(--accent-light));
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .nav-links {
+            display: flex;
+            gap: 2rem;
+            align-items: center;
+        }
+        
+        .nav-links a {
+            color: var(--text-secondary);
+            text-decoration: none;
+            font-size: 0.95rem;
+            transition: color 0.2s;
+        }
+        
+        .nav-links a:hover {
+            color: var(--text-primary);
+        }
+        
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.75rem 1.5rem;
+            border-radius: 8px;
+            font-weight: 500;
+            text-decoration: none;
+            transition: all 0.2s;
+            font-size: 0.95rem;
+        }
+        
+        .btn-primary {
+            background: var(--accent);
+            color: white;
+        }
+        
+        .btn-primary:hover {
+            background: var(--accent-light);
+            transform: translateY(-1px);
+            box-shadow: 0 4px 20px var(--accent-glow);
+        }
+        
+        .btn-secondary {
+            background: var(--bg-tertiary);
+            color: var(--text-primary);
+            border: 1px solid var(--border);
+        }
+        
+        .btn-secondary:hover {
+            background: var(--bg-card);
+            border-color: var(--accent);
+        }
+        
+        /* Hero */
+        .hero {
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            text-align: center;
+            padding: 8rem 2rem 4rem;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .hero::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 800px;
+            height: 800px;
+            background: radial-gradient(circle, var(--accent-glow) 0%, transparent 70%);
+            pointer-events: none;
+            opacity: 0.5;
+        }
+        
+        .hero-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.5rem 1rem;
+            background: var(--bg-tertiary);
+            border: 1px solid var(--border);
+            border-radius: 50px;
+            font-size: 0.875rem;
+            color: var(--text-secondary);
+            margin-bottom: 2rem;
+        }
+        
+        .hero-badge span {
+            color: var(--success);
+        }
+        
+        .hero h1 {
+            font-size: clamp(2.5rem, 6vw, 4rem);
+            font-weight: 700;
+            line-height: 1.1;
+            margin-bottom: 1.5rem;
+            max-width: 800px;
+        }
+        
+        .hero h1 .highlight {
+            background: linear-gradient(135deg, var(--accent), var(--accent-light));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        
+        .hero p {
+            font-size: 1.25rem;
+            color: var(--text-secondary);
+            max-width: 600px;
+            margin-bottom: 2.5rem;
+        }
+        
+        .hero-buttons {
+            display: flex;
+            gap: 1rem;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+        
+        .hero-demo {
+            margin-top: 4rem;
+            max-width: 900px;
+            width: 100%;
+            position: relative;
+        }
+        
+        .demo-window {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+        }
+        
+        .demo-titlebar {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 12px 16px;
+            background: var(--bg-tertiary);
+            border-bottom: 1px solid var(--border);
+        }
+        
+        .demo-dots {
+            display: flex;
+            gap: 6px;
+        }
+        
+        .demo-dot {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+        }
+        
+        .demo-dot.red { background: #ff5f56; }
+        .demo-dot.yellow { background: #ffbd2e; }
+        .demo-dot.green { background: #27c93f; }
+        
+        .demo-title {
+            flex: 1;
+            text-align: center;
+            color: var(--text-muted);
+            font-size: 0.875rem;
+        }
+        
+        .demo-content {
+            padding: 2rem;
+            display: grid;
+            grid-template-columns: 1.5fr 1fr;
+            gap: 1rem;
+            min-height: 300px;
+        }
+        
+        .demo-master {
+            background: linear-gradient(135deg, var(--accent), var(--accent-light));
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 600;
+            color: white;
+            font-size: 1.25rem;
+        }
+        
+        .demo-stack {
+            display: flex;
+            flex-direction: column;
+            gap: 0.75rem;
+        }
+        
+        .demo-stack-item {
+            flex: 1;
+            background: var(--bg-tertiary);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+        }
+        
+        /* Features */
+        .features {
+            padding: 6rem 2rem;
+            background: var(--bg-secondary);
+        }
+        
+        .section-header {
+            text-align: center;
+            max-width: 600px;
+            margin: 0 auto 4rem;
+        }
+        
+        .section-header h2 {
+            font-size: 2.5rem;
+            font-weight: 700;
+            margin-bottom: 1rem;
+        }
+        
+        .section-header p {
+            color: var(--text-secondary);
+            font-size: 1.1rem;
+        }
+        
+        .features-grid {
+            max-width: 1200px;
+            margin: 0 auto;
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+            gap: 1.5rem;
+        }
+        
+        .feature-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            padding: 2rem;
+            transition: all 0.3s;
+        }
+        
+        .feature-card:hover {
+            border-color: var(--accent);
+            transform: translateY(-4px);
+            box-shadow: 0 12px 40px rgba(0, 0, 0, 0.3);
+        }
+        
+        .feature-icon {
+            width: 48px;
+            height: 48px;
+            background: linear-gradient(135deg, var(--accent), var(--accent-light));
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 1.5rem;
+        }
+        
+        .feature-icon svg {
+            width: 24px;
+            height: 24px;
+            color: white;
+        }
+        
+        .feature-card h3 {
+            font-size: 1.25rem;
+            font-weight: 600;
+            margin-bottom: 0.75rem;
+        }
+        
+        .feature-card p {
+            color: var(--text-secondary);
+            font-size: 0.95rem;
+        }
+        
+        /* Layouts Section */
+        .layouts {
+            padding: 6rem 2rem;
+        }
+        
+        .layouts-container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        
+        .layout-tabs {
+            display: flex;
+            gap: 1rem;
+            justify-content: center;
+            margin-bottom: 3rem;
+            flex-wrap: wrap;
+        }
+        
+        .layout-tab {
+            padding: 0.75rem 1.5rem;
+            background: var(--bg-tertiary);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            color: var(--text-secondary);
+            cursor: pointer;
+            transition: all 0.2s;
+            font-size: 0.95rem;
+        }
+        
+        .layout-tab:hover,
+        .layout-tab.active {
+            background: var(--accent);
+            border-color: var(--accent);
+            color: white;
+        }
+        
+        .layout-display {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 3rem;
+            align-items: center;
+        }
+        
+        .layout-visual {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            padding: 2rem;
+            aspect-ratio: 16/10;
+        }
+        
+        .layout-info h3 {
+            font-size: 2rem;
+            margin-bottom: 1rem;
+        }
+        
+        .layout-info p {
+            color: var(--text-secondary);
+            margin-bottom: 1.5rem;
+            font-size: 1.1rem;
+        }
+        
+        .layout-features {
+            list-style: none;
+        }
+        
+        .layout-features li {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            color: var(--text-secondary);
+            margin-bottom: 0.75rem;
+        }
+        
+        .layout-features li svg {
+            color: var(--success);
+            width: 20px;
+            height: 20px;
+        }
+        
+        /* Code Section */
+        .code-section {
+            padding: 6rem 2rem;
+            background: var(--bg-secondary);
+        }
+        
+        .code-container {
+            max-width: 1000px;
+            margin: 0 auto;
+        }
+        
+        .code-block {
+            background: var(--code-bg);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            overflow: hidden;
+        }
+        
+        .code-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 1rem 1.5rem;
+            background: var(--bg-tertiary);
+            border-bottom: 1px solid var(--border);
+        }
+        
+        .code-header span {
+            color: var(--text-muted);
+            font-size: 0.875rem;
+        }
+        
+        .code-copy {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.5rem 1rem;
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            color: var(--text-secondary);
+            cursor: pointer;
+            font-size: 0.875rem;
+            transition: all 0.2s;
+        }
+        
+        .code-copy:hover {
+            border-color: var(--accent);
+            color: var(--text-primary);
+        }
+        
+        pre {
+            padding: 1.5rem;
+            overflow-x: auto;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.9rem;
+            line-height: 1.7;
+        }
+        
+        .code-comment { color: #6a9955; }
+        .code-key { color: #9cdcfe; }
+        .code-string { color: #ce9178; }
+        .code-section { color: #4ec9b0; }
+        
+        /* CTA */
+        .cta {
+            padding: 8rem 2rem;
+            text-align: center;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .cta::before {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 600px;
+            height: 600px;
+            background: radial-gradient(circle, var(--accent-glow) 0%, transparent 70%);
+            pointer-events: none;
+            opacity: 0.3;
+        }
+        
+        .cta h2 {
+            font-size: 2.5rem;
+            margin-bottom: 1rem;
+        }
+        
+        .cta p {
+            color: var(--text-secondary);
+            font-size: 1.1rem;
+            max-width: 500px;
+            margin: 0 auto 2rem;
+        }
+        
+        .cta-buttons {
+            display: flex;
+            gap: 1rem;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+        
+        /* Footer */
+        .footer {
+            padding: 3rem 2rem;
+            border-top: 1px solid var(--border);
+            text-align: center;
+        }
+        
+        .footer-links {
+            display: flex;
+            gap: 2rem;
+            justify-content: center;
+            margin-bottom: 1.5rem;
+            flex-wrap: wrap;
+        }
+        
+        .footer-links a {
+            color: var(--text-secondary);
+            text-decoration: none;
+            transition: color 0.2s;
+        }
+        
+        .footer-links a:hover {
+            color: var(--text-primary);
+        }
+        
+        .footer p {
+            color: var(--text-muted);
+            font-size: 0.875rem;
+        }
+        
+        /* Responsive */
+        @media (max-width: 768px) {
+            .nav-links {
+                display: none;
+            }
+            
+            .layout-display {
+                grid-template-columns: 1fr;
+            }
+            
+            .layout-visual {
+                order: -1;
+            }
+            
+            .demo-content {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Navbar -->
+    <nav class="navbar">
+        <div class="navbar-inner">
+            <a href="#" class="logo">
+                <div class="logo-icon">
+                    <i data-lucide="layout-grid" style="width: 18px; height: 18px; color: white;"></i>
+                </div>
+                Layman
+            </a>
+            <div class="nav-links">
+                <a href="#features">Features</a>
+                <a href="#layouts">Layouts</a>
+                <a href="#install">Install</a>
+                <a href="https://github.com/frap129/layman">Docs</a>
+                <a href="https://github.com/frap129/layman" class="btn btn-secondary">
+                    <i data-lucide="github" style="width: 18px; height: 18px;"></i>
+                    GitHub
+                </a>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Hero -->
+    <section class="hero">
+        <div class="hero-badge">
+            <span>●</span> Open Source
+        </div>
+        <h1>
+            <span class="highlight">Intelligent</span> Layout Management<br>
+            for Sway & i3
+        </h1>
+        <p>
+            Per-workspace tiling layouts that adapt to how you work. 
+            MasterStack, Autotiling, Grid — and extensible with Python.
+        </p>
+        <div class="hero-buttons">
+            <a href="#install" class="btn btn-primary">
+                <i data-lucide="download" style="width: 18px; height: 18px;"></i>
+                Get Started
+            </a>
+            <a href="https://github.com/frap129/layman" class="btn btn-secondary">
+                <i data-lucide="github" style="width: 18px; height: 18px;"></i>
+                View on GitHub
+            </a>
+        </div>
+        
+        <div class="hero-demo">
+            <div class="demo-window">
+                <div class="demo-titlebar">
+                    <div class="demo-dots">
+                        <div class="demo-dot red"></div>
+                        <div class="demo-dot yellow"></div>
+                        <div class="demo-dot green"></div>
+                    </div>
+                    <div class="demo-title">MasterStack Layout — Workspace 1</div>
+                </div>
+                <div class="demo-content">
+                    <div class="demo-master">
+                        <span>Master Window</span>
+                    </div>
+                    <div class="demo-stack">
+                        <div class="demo-stack-item">Stack 1</div>
+                        <div class="demo-stack-item">Stack 2</div>
+                        <div class="demo-stack-item">Stack 3</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Features -->
+    <section class="features" id="features">
+        <div class="section-header">
+            <h2>Why Layman?</h2>
+            <p>A smarter way to manage your tiling window layouts</p>
+        </div>
+        
+        <div class="features-grid">
+            <div class="feature-card">
+                <div class="feature-icon">
+                    <i data-lucide="layers"></i>
+                </div>
+                <h3>Per-Workspace Layouts</h3>
+                <p>MasterStack on workspace 1 for coding, Grid on workspace 2 for monitoring, Autotiling on workspace 3 for browsing. Each workspace works the way you want.</p>
+            </div>
+            
+            <div class="feature-card">
+                <div class="feature-icon">
+                    <i data-lucide="zap"></i>
+                </div>
+                <h3>Zero-Latency Commands</h3>
+                <p>Use Sway's <code>nop</code> bindings for instant response. No process spawning, no delays — just immediate layout control.</p>
+            </div>
+            
+            <div class="feature-card">
+                <div class="feature-icon">
+                    <i data-lucide="refresh-cw"></i>
+                </div>
+                <h3>Hot Reload</h3>
+                <p>Change your configuration and reload without restarting. Tweak your layouts on the fly without losing your window arrangement.</p>
+            </div>
+            
+            <div class="feature-card">
+                <div class="feature-icon">
+                    <i data-lucide="sliders"></i>
+                </div>
+                <h3>Runtime Control</h3>
+                <p>Switch layouts, rotate windows, toggle stack sides, and more — all from keybindings. Full control without touching the config.</p>
+            </div>
+            
+            <div class="feature-card">
+                <div class="feature-icon">
+                    <i data-lucide="puzzle"></i>
+                </div>
+                <h3>Extensible with Python</h3>
+                <p>Create custom layouts without modifying layman. Just drop a Python file in your config directory and it's automatically loaded.</p>
+            </div>
+            
+            <div class="feature-card">
+                <div class="feature-icon">
+                    <i data-lucide="feather"></i>
+                </div>
+                <h3>Minimal Footprint</h3>
+                <p>Single daemon, simple TOML config, zero external dependencies beyond Python. Runs quietly in the background.</p>
+            </div>
+        </div>
+    </section>
+
+    <!-- Layouts -->
+    <section class="layouts" id="layouts">
+        <div class="section-header">
+            <h2>Built-in Layouts</h2>
+            <p>Three powerful layouts out of the box, plus custom layouts via Python</p>
+        </div>
+        
+        <div class="layouts-container">
+            <div class="layout-tabs">
+                <button class="layout-tab active" data-layout="masterstack">MasterStack</button>
+                <button class="layout-tab" data-layout="autotiling">Autotiling</button>
+                <button class="layout-tab" data-layout="grid">Grid</button>
+            </div>
+            
+            <div class="layout-display">
+                <div class="layout-visual" id="layout-visual">
+                    <!-- Dynamic layout visualization -->
+                </div>
+                <div class="layout-info">
+                    <h3 id="layout-title">MasterStack</h3>
+                    <p id="layout-desc">A primary master window with a configurable stack. New windows become master, pushing the old master to the stack.</p>
+                    <ul class="layout-features" id="layout-features">
+                        <li><i data-lucide="check"></i> Configurable master width (1-99%)</li>
+                        <li><i data-lucide="check"></i> Stack layouts: splitv, splith, tabbed, stacking</li>
+                        <li><i data-lucide="check"></i> Stack side: left or right</li>
+                        <li><i data-lucide="check"></i> Rotate windows clockwise/counter-clockwise</li>
+                        <li><i data-lucide="check"></i> Visible stack limit with substack</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Install -->
+    <section class="code-section" id="install">
+        <div class="section-header">
+            <h2>Get Started in 60 Seconds</h2>
+            <p>Install, configure, and start using layman</p>
+        </div>
+        
+        <div class="code-container">
+            <div class="code-block">
+                <div class="code-header">
+                    <span>Installation & Setup</span>
+                    <button class="code-copy" onclick="copyCode()">
+                        <i data-lucide="copy" style="width: 14px; height: 14px;"></i>
+                        Copy
+                    </button>
+                </div>
+                <pre><code><span class="code-comment"># Clone and install</span>
+git clone https://github.com/frap129/layman
+cd layman && pip install .
+
+<span class="code-comment"># Create config</span>
+mkdir -p ~/.config/layman
+cat > ~/.config/layman/config.toml << 'EOF'
+<span class="code-section">[layman]</span>
+<span class="code-key">defaultLayout</span> = <span class="code-string">"MasterStack"</span>
+<span class="code-key">masterWidth</span> = <span class="code-string">50</span>
+EOF
+
+<span class="code-comment"># Add to your Sway config (~/.config/sway/config)</span>
+<span class="code-comment"># exec layman</span>
+<span class="code-comment"># bindsym $mod+m nop layman layout set MasterStack</span>
+
+<span class="code-comment"># Reload Sway and you're done!</span></code></pre>
+            </div>
+        </div>
+    </section>
+
+    <!-- CTA -->
+    <section class="cta">
+        <h2>Ready to take control of your layouts?</h2>
+        <p>Join the community of power users who've made their tiling workflow smarter.</p>
+        <div class="cta-buttons">
+            <a href="https://github.com/frap129/layman" class="btn btn-primary">
+                <i data-lucide="github" style="width: 18px; height: 18px;"></i>
+                View on GitHub
+            </a>
+            <a href="https://github.com/frap129/layman#documentation" class="btn btn-secondary">
+                <i data-lucide="book-open" style="width: 18px; height: 18px;"></i>
+                Read the Docs
+            </a>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <div class="footer-links">
+            <a href="https://github.com/frap129/layman">GitHub</a>
+            <a href="https://github.com/frap129/layman#documentation">Documentation</a>
+            <a href="https://github.com/frap129/layman/issues">Issues</a>
+            <a href="https://github.com/frap129/layman/blob/main/LICENSE">License</a>
+        </div>
+        <p>Inspired by <a href="https://github.com/frap129/layman" style="color: var(--accent);">layman</a> by Joe Maples. Licensed under GPL v3.</p>
+    </footer>
+
+    <script>
+        // Initialize Lucide icons
+        lucide.createIcons();
+        
+        // Layout data
+        const layouts = {
+            masterstack: {
+                title: 'MasterStack',
+                desc: 'A primary master window with a configurable stack. New windows become master, pushing the old master to the stack.',
+                features: [
+                    'Configurable master width (1-99%)',
+                    'Stack layouts: splitv, splith, tabbed, stacking',
+                    'Stack side: left or right',
+                    'Rotate windows clockwise/counter-clockwise',
+                    'Visible stack limit with substack'
+                ],
+                visual: `
+                    <div style="display: grid; grid-template-columns: 1.5fr 1fr; gap: 1rem; height: 100%;">
+                        <div style="background: linear-gradient(135deg, var(--accent), var(--accent-light)); border-radius: 8px; display: flex; align-items: center; justify-content: center; color: white; font-weight: 600;">Master</div>
+                        <div style="display: flex; flex-direction: column; gap: 0.5rem;">
+                            <div style="flex: 1; background: var(--bg-tertiary); border: 1px solid var(--border); border-radius: 6px; display: flex; align-items: center; justify-content: center; color: var(--text-muted); font-size: 0.85rem;">Stack 1</div>
+                            <div style="flex: 1; background: var(--bg-tertiary); border: 1px solid var(--border); border-radius: 6px; display: flex; align-items: center; justify-content: center; color: var(--text-muted); font-size: 0.85rem;">Stack 2</div>
+                            <div style="flex: 1; background: var(--bg-tertiary); border: 1px solid var(--border); border-radius: 6px; display: flex; align-items: center; justify-content: center; color: var(--text-muted); font-size: 0.85rem;">Stack 3</div>
+                        </div>
+                    </div>
+                `
+            },
+            autotiling: {
+                title: 'Autotiling',
+                desc: 'Alternates between horizontal and vertical splits based on window dimensions, creating a natural spiral-like pattern.',
+                features: [
+                    'Automatic split direction based on container size',
+                    'Natural, balanced layouts',
+                    'Configurable depth limit',
+                    'Based on nwg-piotr\'s autotiling',
+                    'Great for general-purpose workspaces'
+                ],
+                visual: `
+                    <div style="display: grid; grid-template-columns: 1fr 2fr; gap: 0.75rem; height: 100%;">
+                        <div style="background: linear-gradient(135deg, var(--accent), var(--accent-light)); border-radius: 8px; display: flex; align-items: center; justify-content: center; color: white; font-weight: 600;">1</div>
+                        <div style="display: grid; grid-template-rows: 1fr 1fr; gap: 0.5rem;">
+                            <div style="background: var(--bg-tertiary); border: 1px solid var(--border); border-radius: 6px; display: flex; align-items: center; justify-content: center; color: var(--text-muted);">2</div>
+                            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem;">
+                                <div style="background: var(--bg-tertiary); border: 1px solid var(--border); border-radius: 6px; display: flex; align-items: center; justify-content: center; color: var(--text-muted);">3</div>
+                                <div style="background: var(--bg-tertiary); border: 1px solid var(--border); border-radius: 6px; display: flex; align-items: center; justify-content: center; color: var(--text-muted);">4</div>
+                            </div>
+                        </div>
+                    </div>
+                `
+            },
+            grid: {
+                title: 'Grid',
+                desc: 'Distributes windows evenly by always splitting the largest container, creating balanced grid-like patterns.',
+                features: [
+                    'Automatic even distribution',
+                    'Always splits the largest container',
+                    'Perfect for monitoring dashboards',
+                    'No configuration needed',
+                    'Scales naturally with window count'
+                ],
+                visual: `
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; grid-template-rows: 1fr 1fr; gap: 0.75rem; height: 100%;">
+                        <div style="background: linear-gradient(135deg, var(--accent), var(--accent-light)); border-radius: 8px; display: flex; align-items: center; justify-content: center; color: white; font-weight: 600;">1</div>
+                        <div style="background: var(--bg-tertiary); border: 1px solid var(--border); border-radius: 6px; display: flex; align-items: center; justify-content: center; color: var(--text-muted);">2</div>
+                        <div style="background: var(--bg-tertiary); border: 1px solid var(--border); border-radius: 6px; display: flex; align-items: center; justify-content: center; color: var(--text-muted);">3</div>
+                        <div style="background: var(--bg-tertiary); border: 1px solid var(--border); border-radius: 6px; display: flex; align-items: center; justify-content: center; color: var(--text-muted);">4</div>
+                    </div>
+                `
+            }
+        };
+        
+        // Tab switching
+        document.querySelectorAll('.layout-tab').forEach(tab => {
+            tab.addEventListener('click', () => {
+                const layout = tab.dataset.layout;
+                const data = layouts[layout];
+                
+                // Update active tab
+                document.querySelectorAll('.layout-tab').forEach(t => t.classList.remove('active'));
+                tab.classList.add('active');
+                
+                // Update content
+                document.getElementById('layout-title').textContent = data.title;
+                document.getElementById('layout-desc').textContent = data.desc;
+                document.getElementById('layout-visual').innerHTML = data.visual;
+                
+                // Update features
+                const featuresEl = document.getElementById('layout-features');
+                featuresEl.innerHTML = data.features.map(f => `
+                    <li><i data-lucide="check"></i> ${f}</li>
+                `).join('');
+                
+                // Re-initialize icons
+                lucide.createIcons();
+            });
+        });
+        
+        // Initialize first layout visual
+        document.getElementById('layout-visual').innerHTML = layouts.masterstack.visual;
+        
+        // Copy code function
+        function copyCode() {
+            const code = document.querySelector('pre code').textContent;
+            navigator.clipboard.writeText(code);
+            const btn = document.querySelector('.code-copy');
+            btn.innerHTML = '<i data-lucide="check" style="width: 14px; height: 14px;"></i> Copied!';
+            lucide.createIcons();
+            setTimeout(() => {
+                btn.innerHTML = '<i data-lucide="copy" style="width: 14px; height: 14px;"></i> Copy';
+                lucide.createIcons();
+            }, 2000);
+        }
+    </script>
+</body>
+</html>
