@@ -42,9 +42,10 @@ The site is deployed automatically via Cloudflare Pages.
 
 ### How it works
 
-1. Cloudflare runs the build command from `wrangler.toml`:
+1. Cloudflare runs the build command configured in Project Settings:
    `cd site && npm install && npm run build`
 2. Astro builds the landing page, demo, and 404 page into `site/dist/`.
+
 3. All JS/CSS assets get content-hashed filenames (e.g.,
    `_astro/App.Bojvjspf.js`) for aggressive caching.
 4. `wrangler.toml` sets `pages_build_output_dir = "site/dist"`, so
