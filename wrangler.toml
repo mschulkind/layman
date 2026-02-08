@@ -1,0 +1,9 @@
+name = "layman"
+compatibility_date = "2026-02-01"
+
+[assets]
+directory = "site/dist"
+
+[build]
+command = "cd site && npm run build"
+
