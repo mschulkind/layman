@@ -1,6 +1,6 @@
 name = "layman"
 compatibility_date = "2026-02-01"
-pages_build_output_dir = "site"
+pages_build_output_dir = "site/dist"
 
 [build]
-command = "cd site/demo && npm install && npm run build && rm -rf src e2e node_modules *.ts *.json *.mjs .gitignore && mv dist/* . && rmdir dist"
+command = "cd site && npm install && npm run build"

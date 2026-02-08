@@ -10,7 +10,7 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
     
-    <script src="https://unpkg.com/lucide@latest"></script>
+    <script is:inline src="https://unpkg.com/lucide@latest"></script>
     
     <style>
         :root {
@@ -349,6 +349,7 @@
                 <a href="#layouts">Layouts</a>
                 <a href="#install">Install</a>
                 <a href="https://github.com/mschulkind/layman/tree/main/docs">Docs</a>
+                <a href="/demo/">Try the Demo</a>
                 <a href="https://github.com/mschulkind/layman" class="btn btn-ghost">
                     <i data-lucide="github" style="width: 16px; height: 16px;"></i>
                     GitHub
@@ -380,6 +381,10 @@
                 <a href="#install" class="btn btn-primary btn-lg">
                     <i data-lucide="terminal" style="width: 18px; height: 18px;"></i>
                     Get Started
+                </a>
+                <a href="/demo/" class="btn btn-ghost btn-lg">
+                    <i data-lucide="play" style="width: 18px; height: 18px;"></i>
+                    Try the Demo
                 </a>
                 <a href="https://github.com/mschulkind/layman" class="btn btn-ghost btn-lg">
                     <i data-lucide="github" style="width: 18px; height: 18px;"></i>
@@ -626,7 +631,7 @@
         </div>
     </footer>
 
-    <script>
+    <script is:inline>
         // Initialize Lucide
         lucide.createIcons();
         

@@ -18,7 +18,7 @@ run-debug:
 # ============== Quality ==============
 
 # Run all checks (format, lint, test)
-check: format lint test demo-check
+check: format lint test site-check
     @echo "✓ All checks passed"
 
 # ============== Linting ==============
@@ -146,10 +146,10 @@ setup-python:
 setup-node:
     pnpm install
 
-# Setup the interactive demo
+# Setup the site (landing page + interactive demo)
 setup-demo:
-    cd site/demo && npm install
-    cd site/demo && npx playwright install chromium
+    cd site && npm install
+    cd site && npx playwright install chromium
 
 # ============== Documentation ==============
 
@@ -211,45 +211,45 @@ clean:
 
 # ============== Interactive Demo ==============
 
-# Run the interactive demo dev server
-demo-dev:
-    cd site/demo && npm run dev
+# Run the site dev server (landing page + demo)
+site-dev:
+    cd site && npm run dev
 
 # Run demo unit tests (Vitest)
 demo-test:
-    cd site/demo && npm test
+    cd site && npm test
 
 # Run demo unit tests with coverage
 demo-test-cov:
-    cd site/demo && npm run test:coverage
+    cd site && npm run test:coverage
 
 # Run demo E2E browser tests (Playwright)
 demo-test-e2e:
-    cd site/demo && npx playwright test
+    cd site && npx playwright test
 
 # Run demo E2E tests in headed browser (visible)
 demo-test-e2e-headed:
-    cd site/demo && npx playwright test --headed
+    cd site && npx playwright test --headed
 
 # Run all demo tests (unit + E2E)
 demo-test-all: demo-test demo-test-e2e
     @echo "✓ All demo tests passed"
 
-# Lint demo code
-demo-lint:
-    cd site/demo && npm run lint
+# Lint site code
+site-lint:
+    cd site && npm run lint
 
-# Build the demo for production
-demo-build:
-    cd site/demo && npm run build
+# Build the site for production
+site-build:
+    cd site && npm run build
 
-# Preview the production demo build
-demo-preview:
-    cd site/demo && npm run build && npm run preview
+# Preview the production site build
+site-preview:
+    cd site && npm run build && npm run preview
 
-# Run all demo checks (lint + unit tests + E2E tests)
-demo-check: demo-lint demo-test demo-test-e2e
-    @echo "✓ All demo checks passed"
+# Run all site checks (lint + unit tests + E2E tests)
+site-check: site-lint demo-test demo-test-e2e
+    @echo "✓ All site checks passed"
 
 # ============== Utilities ==============
 
