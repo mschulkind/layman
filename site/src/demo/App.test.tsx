@@ -22,4 +22,9 @@ describe("App", () => {
     render(<App />);
     expect(screen.getByTestId("status-bar")).toBeInTheDocument();
   });
+
+  it("renders the keyboard panel", () => {
+    render(<App />);
+    expect(screen.getByTestId("keyboard-panel")).toBeInTheDocument();
+  });
 });

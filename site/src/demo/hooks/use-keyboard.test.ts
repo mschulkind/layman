@@ -12,11 +12,14 @@ function resetStore() {
     showHelp: false,
     nextNumber: 1,
     containerRect: { x: 0, y: 0, width: 1000, height: 600 },
+    layoutToast: null,
   });
 }
 
 function pressKey(key: string, opts: Partial<KeyboardEventInit> = {}) {
-  window.dispatchEvent(new KeyboardEvent("keydown", { key, bubbles: true, ...opts }));
+  window.dispatchEvent(
+    new KeyboardEvent("keydown", { key, bubbles: true, ...opts }),
+  );
 }
 
 describe("useKeyboard", () => {
@@ -35,28 +38,54 @@ describe("useKeyboard", () => {
     expect(useWindowStore.getState().windows).toHaveLength(0);
   });
 
-  it("L focuses next", () => {
+  it("J/ArrowDown focuses next in MasterStack", () => {
     renderHook(() => useKeyboard());
     useWindowStore.getState().spawnWindow();
     useWindowStore.getState().spawnWindow();
-    pressKey("l");
+    // focused: win-2 (idx 0), win-1 (idx 1)
+    pressKey("j");
     expect(useWindowStore.getState().focusedId).toBe("win-1");
   });
 
-  it("H focuses prev", () => {
+  it("K/ArrowUp focuses prev in MasterStack", () => {
+    renderHook(() => useKeyboard());
+    useWindowStore.getState().spawnWindow();
+    useWindowStore.getState().spawnWindow();
+    // focused: win-2 (idx 0)
+    pressKey("k");
+    // wraps to last: win-1
+    expect(useWindowStore.getState().focusedId).toBe("win-1");
+  });
+
+  it("L/ArrowRight are no-ops in MasterStack", () => {
+    renderHook(() => useKeyboard());
+    useWindowStore.getState().spawnWindow();
+    useWindowStore.getState().spawnWindow();
+    // focused: win-2 (idx 0)
+    pressKey("l");
+    expect(useWindowStore.getState().focusedId).toBe("win-2");
+    pressKey("ArrowRight");
+    expect(useWindowStore.getState().focusedId).toBe("win-2");
+  });
+
+  it("H/ArrowLeft are no-ops in MasterStack", () => {
     renderHook(() => useKeyboard());
     useWindowStore.getState().spawnWindow();
     useWindowStore.getState().spawnWindow();
     pressKey("h");
-    expect(useWindowStore.getState().focusedId).toBe("win-1");
+    expect(useWindowStore.getState().focusedId).toBe("win-2");
   });
 
-  it("ArrowRight focuses next", () => {
+  it("L/H navigate in Grid layout", () => {
     renderHook(() => useKeyboard());
+    useWindowStore.getState().switchLayout("Grid");
     useWindowStore.getState().spawnWindow();
     useWindowStore.getState().spawnWindow();
-    pressKey("ArrowRight");
+    // focused: win-2 (idx 0)
+    pressKey("l");
     expect(useWindowStore.getState().focusedId).toBe("win-1");
+    pressKey("h");
+    expect(useWindowStore.getState().focusedId).toBe("win-2");
   });
 
   it("1-4 switch layouts", () => {

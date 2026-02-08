@@ -10,6 +10,7 @@ function resetStore() {
     showHelp: false,
     nextNumber: 1,
     containerRect: { x: 0, y: 0, width: 1000, height: 600 },
+    layoutToast: null,
   });
 }
 
@@ -213,6 +214,59 @@ describe("window-store", () => {
 
     it("returns empty for no windows", () => {
       expect(useWindowStore.getState().getLayoutRects()).toEqual([]);
+    });
+  });
+
+  describe("switchLayout", () => {
+    it("sets layout toast", () => {
+      useWindowStore.getState().switchLayout("Grid");
+      expect(useWindowStore.getState().layoutToast).toContain("grid");
+    });
+
+    it("dismissToast clears the toast", () => {
+      useWindowStore.getState().switchLayout("Grid");
+      useWindowStore.getState().dismissToast();
+      expect(useWindowStore.getState().layoutToast).toBeNull();
+    });
+  });
+
+  describe("focusDirection", () => {
+    it("MasterStack: up/down cycle linearly", () => {
+      useWindowStore.getState().spawnWindow(); // win-1
+      useWindowStore.getState().spawnWindow(); // win-2 (focused, idx 0)
+      // down → focusNext → win-1
+      useWindowStore.getState().focusDirection("down");
+      expect(useWindowStore.getState().focusedId).toBe("win-1");
+      // up → focusPrev → win-2
+      useWindowStore.getState().focusDirection("up");
+      expect(useWindowStore.getState().focusedId).toBe("win-2");
+    });
+
+    it("MasterStack: left/right are no-ops", () => {
+      useWindowStore.getState().spawnWindow();
+      useWindowStore.getState().spawnWindow();
+      const before = useWindowStore.getState().focusedId;
+      useWindowStore.getState().focusDirection("left");
+      expect(useWindowStore.getState().focusedId).toBe(before);
+      useWindowStore.getState().focusDirection("right");
+      expect(useWindowStore.getState().focusedId).toBe(before);
+    });
+
+    it("Grid: all directions cycle linearly", () => {
+      useWindowStore.getState().switchLayout("Grid");
+      useWindowStore.getState().spawnWindow();
+      useWindowStore.getState().spawnWindow();
+      // right → focusNext
+      useWindowStore.getState().focusDirection("right");
+      expect(useWindowStore.getState().focusedId).toBe("win-1");
+      // left → focusPrev
+      useWindowStore.getState().focusDirection("left");
+      expect(useWindowStore.getState().focusedId).toBe("win-2");
+    });
+
+    it("no-ops on empty window list", () => {
+      useWindowStore.getState().focusDirection("down");
+      expect(useWindowStore.getState().focusedId).toBeNull();
     });
   });
 });

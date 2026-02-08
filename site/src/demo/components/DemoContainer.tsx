@@ -1,6 +1,7 @@
 import { useEffect, useRef } from "react";
 import { useWindowStore } from "../store/window-store";
 import { Window } from "./Window";
+import { LayoutToast } from "./LayoutToast";
 import { AnimatePresence } from "framer-motion";
 
 export function DemoContainer() {
@@ -34,7 +35,7 @@ export function DemoContainer() {
     <div
       ref={containerRef}
       data-testid="demo-container"
-      className="relative aspect-[16/10] w-full max-w-4xl overflow-hidden rounded-xl border border-border bg-bg-secondary shadow-2xl shadow-black/50"
+      className="relative min-h-0 flex-1 overflow-hidden rounded-lg border border-border bg-bg-secondary"
       tabIndex={0}
     >
       <div
@@ -76,6 +77,8 @@ export function DemoContainer() {
           );
         })}
       </AnimatePresence>
+
+      <LayoutToast />
     </div>
   );
 }

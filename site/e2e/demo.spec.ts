@@ -29,6 +29,15 @@ test.describe("Demo page loads", () => {
     await expect(statusBar.getByText("0 windows")).toBeVisible();
     await expect(statusBar.getByText("MasterStack")).toBeVisible();
   });
+
+  test("keyboard panel is always visible", async ({ page }) => {
+    await page.goto("/demo/");
+    const panel = page.getByTestId("keyboard-panel");
+    await expect(panel).toBeVisible();
+    await expect(panel.getByText("Spawn window")).toBeVisible();
+    await expect(panel.getByText("Navigate")).toBeVisible();
+    await expect(panel.getByText("Actions")).toBeVisible();
+  });
 });
 
 test.describe("Keyboard shortcuts - window management", () => {
@@ -84,36 +93,61 @@ test.describe("Keyboard shortcuts - window management", () => {
 });
 
 test.describe("Keyboard shortcuts - focus navigation", () => {
-  test("L moves focus to next window", async ({ page }) => {
+  test("J/ArrowDown moves focus to next window in MasterStack", async ({
+    page,
+  }) => {
     await page.goto("/demo/");
     await focusDemo(page);
     await page.keyboard.press("n");
     await page.keyboard.press("n");
+    // focused: win-2. J/down should go to win-1
+    await page.keyboard.press("j");
+    await expect(
+      page.getByTestId("status-bar").getByText("Terminal #1"),
+    ).toBeVisible();
+  });
+
+  test("K/ArrowUp moves focus to previous window in MasterStack", async ({
+    page,
+  }) => {
+    await page.goto("/demo/");
+    await focusDemo(page);
+    await page.keyboard.press("n");
+    await page.keyboard.press("n");
+    // focused: win-2 (idx 0), k wraps to win-1
+    await page.keyboard.press("k");
+    await expect(
+      page.getByTestId("status-bar").getByText("Terminal #1"),
+    ).toBeVisible();
+  });
+
+  test("L/H are no-ops in MasterStack", async ({ page }) => {
+    await page.goto("/demo/");
+    await focusDemo(page);
+    await page.keyboard.press("n");
+    await page.keyboard.press("n");
+    // focused: win-2 (Browser #2)
+    await page.keyboard.press("l");
+    // Should still be win-2
+    await expect(
+      page.getByTestId("status-bar").getByText("Browser #2"),
+    ).toBeVisible();
+  });
+
+  test("L/H navigate in Grid layout", async ({ page }) => {
+    await page.goto("/demo/");
+    await focusDemo(page);
+    await page.keyboard.press("3"); // Switch to Grid
+    await page.keyboard.press("n");
+    await page.keyboard.press("n");
+    // focused: win-2
     await page.keyboard.press("l");
     await expect(
       page.getByTestId("status-bar").getByText("Terminal #1"),
     ).toBeVisible();
-  });
-
-  test("H moves focus to previous window", async ({ page }) => {
-    await page.goto("/demo/");
-    await focusDemo(page);
-    await page.keyboard.press("n");
-    await page.keyboard.press("n");
     await page.keyboard.press("h");
     await expect(
-      page.getByTestId("status-bar").getByText("Terminal #1"),
-    ).toBeVisible();
-  });
-
-  test("arrow keys work for focus navigation", async ({ page }) => {
-    await page.goto("/demo/");
-    await focusDemo(page);
-    await page.keyboard.press("n");
-    await page.keyboard.press("n");
-    await page.keyboard.press("ArrowRight");
-    await expect(
-      page.getByTestId("status-bar").getByText("Terminal #1"),
+      page.getByTestId("status-bar").getByText("Browser #2"),
     ).toBeVisible();
   });
 });
@@ -139,6 +173,14 @@ test.describe("Keyboard shortcuts - layout switching", () => {
     await page.keyboard.press("1");
     await expect(statusBar.getByText("MasterStack")).toBeVisible();
   });
+
+  test("layout toast appears when switching", async ({ page }) => {
+    await page.goto("/demo/");
+    await focusDemo(page);
+    await page.keyboard.press("2");
+    await expect(page.getByTestId("layout-toast")).toBeVisible();
+    await expect(page.getByText("spiral pattern")).toBeVisible();
+  });
 });
 
 test.describe("Keyboard shortcuts - window movement", () => {
@@ -147,7 +189,7 @@ test.describe("Keyboard shortcuts - window movement", () => {
     await focusDemo(page);
     await page.keyboard.press("n");
     await page.keyboard.press("n");
-    await page.keyboard.press("l");
+    await page.keyboard.press("j"); // focus win-1
     await page.keyboard.press("Enter");
     await expect(
       page.getByTestId("status-bar").getByText("Terminal #1"),
@@ -167,34 +209,23 @@ test.describe("Keyboard shortcuts - window movement", () => {
   });
 });
 
-test.describe("Help overlay", () => {
-  test("? toggles help overlay", async ({ page }) => {
+test.describe("Keyboard panel", () => {
+  test("shows layout-specific shortcuts", async ({ page }) => {
     await page.goto("/demo/");
+    const panel = page.getByTestId("keyboard-panel");
+
+    // MasterStack: shows linear focus
+    await expect(panel.getByText("Focus prev (linear)")).toBeVisible();
+    await expect(panel.getByText("— (no-op)")).toBeVisible();
+
+    // Switch to ThreeColumn
     await focusDemo(page);
-    await expect(page.getByTestId("help-overlay")).not.toBeVisible();
+    await page.keyboard.press("4");
 
-    await page.keyboard.press("?");
-    const helpOverlay = page.getByTestId("help-overlay");
-    await expect(helpOverlay).toBeVisible();
-    await expect(
-      helpOverlay.getByRole("heading", { name: /Keyboard Shortcuts/ }),
-    ).toBeVisible();
-    await expect(helpOverlay.getByText("Spawn window")).toBeVisible();
-
-    await page.keyboard.press("?");
-    await expect(page.getByTestId("help-overlay")).not.toBeVisible();
-  });
-
-  test("clicking backdrop closes help overlay", async ({ page }) => {
-    await page.goto("/demo/");
-    await focusDemo(page);
-    await page.keyboard.press("?");
-    await expect(page.getByTestId("help-overlay")).toBeVisible();
-
-    await page
-      .getByTestId("help-overlay")
-      .click({ position: { x: 10, y: 10 } });
-    await expect(page.getByTestId("help-overlay")).not.toBeVisible();
+    // ThreeColumn: shows column navigation
+    await expect(panel.getByText("Focus left column")).toBeVisible();
+    await expect(panel.getByText("Focus right column")).toBeVisible();
+    await expect(panel.getByText("Focus up in column")).toBeVisible();
   });
 });
 
@@ -246,21 +277,18 @@ test.describe("Full workflow", () => {
     }
     await expect(statusBar.getByText("4 windows")).toBeVisible();
 
+    // Switch through layouts
     for (const key of ["2", "3", "4", "1"]) {
       await page.keyboard.press(key);
     }
 
-    await page.keyboard.press("l");
-    await page.keyboard.press("l");
-    await page.keyboard.press("h");
+    // Navigate using j/k (up/down in MasterStack)
+    await page.keyboard.press("j");
+    await page.keyboard.press("j");
+    await page.keyboard.press("k");
 
     await page.keyboard.press("q");
     await expect(statusBar.getByText("3 windows")).toBeVisible();
-
-    await page.keyboard.press("?");
-    await expect(page.getByTestId("help-overlay")).toBeVisible();
-    await page.keyboard.press("?");
-    await expect(page.getByTestId("help-overlay")).not.toBeVisible();
 
     await page.keyboard.press("q");
     await page.keyboard.press("q");
