@@ -5,8 +5,8 @@ an interactive demo, and a custom 404 page. Astro handles the build pipeline,
 giving us content-hashed filenames for cache busting and a clean deployment
 to Cloudflare Pages.
 
-**Live site:** <https://layman.pages.dev/>  
-**Live demo:** <https://layman.pages.dev/demo/>
+**Live site:** <https://layman.mschulkind.workers.dev/>  
+**Live demo:** <https://layman.mschulkind.workers.dev/demo/>
 
 ## Running Locally
 
@@ -38,20 +38,20 @@ how it will look when deployed.
 
 ## Deployment
 
-The site is deployed automatically via Cloudflare Pages.
+The site is deployed to Cloudflare Workers as a static assets Worker.
 
 ### How it works
 
-1. Cloudflare detects the root `package.json` and runs the `build` script:
-   `cd site && npm install && npm run build`
+1. Run `just site-deploy` (or `cd site && npm run deploy`).
 2. Astro builds the landing page, demo, and 404 page into `site/dist/`.
-
-
 3. All JS/CSS assets get content-hashed filenames (e.g.,
    `_astro/App.Bojvjspf.js`) for aggressive caching.
-4. `wrangler.toml` sets `pages_build_output_dir = "site/dist"`, so
-   Cloudflare serves the Astro build output directly.
-5. Cloudflare Pages automatically serves `404.html` for unknown routes.
+4. Wrangler uploads the `dist/` directory as static assets to the
+   `layman` Worker (configured in `site/wrangler.jsonc`).
+5. The Worker serves `404.html` for unknown routes via
+   `not_found_handling: "404-page"`.
+
+**Live URL:** <https://layman.mschulkind.workers.dev/>
 
 ### Build for deployment
 
@@ -61,11 +61,19 @@ just site-build
 
 Output lands in `site/dist/`.
 
+### Deploy
+
+```bash
+just site-deploy       # Build + deploy to Workers
+just site-deploy-dry   # Validate without publishing
+```
+
 ## Project Structure
 
 ```text
 site/
 ├── astro.config.mjs         # Astro configuration (React integration, Tailwind)
+├── wrangler.jsonc            # Cloudflare Workers deployment config
 ├── package.json              # Unified dependencies
 ├── tsconfig.json
 ├── vitest.config.ts          # Unit test configuration
@@ -133,6 +141,7 @@ The demo is a React SPA that runs entirely client-side. The Astro page at
 - **Tailwind CSS v4** — styling (via `@tailwindcss/vite`)
 - **Zustand** — state management
 - **Framer Motion** — layout animations
+- **Wrangler 4** — Cloudflare Workers deployment
 - **Vitest** — unit tests (jsdom)
 - **Playwright** — E2E browser tests
 
@@ -218,6 +227,9 @@ This is also included in the top-level `just check`.
 | `just site-dev` | Start Astro dev server with hot reload |
 | `just site-build` | Production build to `site/dist/` |
 | `just site-preview` | Build + preview production bundle |
+| `just site-deploy` | Build + deploy to Cloudflare Workers |
+| `just site-deploy-dry` | Validate deploy without publishing |
+| `just site-cf-dev` | Run wrangler dev (Workers runtime locally) |
 | `just demo-test` | Run Vitest unit tests |
 | `just demo-test-cov` | Unit tests with coverage report |
 | `just demo-test-e2e` | Run Playwright E2E tests (headless) |

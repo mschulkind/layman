@@ -247,6 +247,18 @@ site-build:
 site-preview:
     cd site && npm run build && npm run preview
 
+# Deploy site to Cloudflare Workers
+site-deploy:
+    cd site && npm run deploy
+
+# Dry-run deploy (validate without publishing)
+site-deploy-dry:
+    cd site && npm run deploy:dry-run
+
+# Run wrangler dev server (serves built assets via Workers runtime)
+site-cf-dev:
+    cd site && npm run cf:dev
+
 # Run all site checks (lint + unit tests + E2E tests)
 site-check: site-lint demo-test demo-test-e2e
     @echo "✓ All site checks passed"
