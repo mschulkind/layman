@@ -1,0 +1,742 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Layman — Per-workspace Tiling Layouts for Sway & i3</title>
+    <meta name="description" content="Different layouts on every workspace. MasterStack, Autotiling, Grid, and custom Python layouts for Sway and i3 window managers.">
+    
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    
+    <script src="https://unpkg.com/lucide@latest"></script>
+    
+    <style>
+        :root {
+            --bg-primary: #09090b;
+            --bg-secondary: #0f0f13;
+            --bg-tertiary: #18181b;
+            --bg-card: #141418;
+            --bg-card-hover: #1c1c22;
+            --text-primary: #fafafa;
+            --text-secondary: #a1a1aa;
+            --text-muted: #52525b;
+            --accent: #6366f1;
+            --accent-light: #818cf8;
+            --accent-lighter: #a5b4fc;
+            --accent-glow: rgba(99, 102, 241, 0.15);
+            --accent-glow-strong: rgba(99, 102, 241, 0.3);
+            --border: rgba(255,255,255,0.06);
+            --border-hover: rgba(255,255,255,0.12);
+            --success: #34d399;
+            --code-bg: #111114;
+            --gradient-1: #6366f1;
+            --gradient-2: #8b5cf6;
+            --gradient-3: #a78bfa;
+        }
+        
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        html { scroll-behavior: smooth; }
+        
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            line-height: 1.6;
+            overflow-x: hidden;
+            -webkit-font-smoothing: antialiased;
+        }
+        
+        .container { max-width: 1200px; margin: 0 auto; padding: 0 2rem; }
+        
+        /* ─── Navbar ─── */
+        .navbar {
+            position: fixed; top: 0; left: 0; right: 0; z-index: 100;
+            padding: 0.875rem 2rem;
+            background: rgba(9, 9, 11, 0.75);
+            backdrop-filter: blur(16px) saturate(180%);
+            border-bottom: 1px solid var(--border);
+            transition: all 0.3s;
+        }
+        .navbar.scrolled { background: rgba(9, 9, 11, 0.92); }
+        .navbar-inner { max-width: 1200px; margin: 0 auto; display: flex; justify-content: space-between; align-items: center; }
+        
+        .logo { font-size: 1.35rem; font-weight: 700; color: var(--text-primary); text-decoration: none; display: flex; align-items: center; gap: 0.625rem; }
+        .logo-icon {
+            width: 30px; height: 30px;
+            background: linear-gradient(135deg, var(--gradient-1), var(--gradient-2));
+            border-radius: 7px; display: flex; align-items: center; justify-content: center;
+        }
+        
+        .nav-links { display: flex; gap: 1.75rem; align-items: center; }
+        .nav-links a { color: var(--text-secondary); text-decoration: none; font-size: 0.875rem; font-weight: 450; transition: color 0.2s; }
+        .nav-links a:hover { color: var(--text-primary); }
+        
+        .btn {
+            display: inline-flex; align-items: center; gap: 0.5rem;
+            padding: 0.625rem 1.25rem; border-radius: 8px; font-weight: 500;
+            text-decoration: none; transition: all 0.2s ease; font-size: 0.875rem;
+            border: none; cursor: pointer;
+        }
+        .btn-primary {
+            background: linear-gradient(135deg, var(--gradient-1), var(--gradient-2));
+            color: white; box-shadow: 0 0 20px var(--accent-glow);
+        }
+        .btn-primary:hover { transform: translateY(-1px); box-shadow: 0 4px 24px var(--accent-glow-strong); filter: brightness(1.1); }
+        .btn-ghost { background: transparent; color: var(--text-secondary); border: 1px solid var(--border); }
+        .btn-ghost:hover { background: var(--bg-tertiary); border-color: var(--border-hover); color: var(--text-primary); }
+        .btn-lg { padding: 0.875rem 1.75rem; font-size: 0.95rem; border-radius: 10px; }
+        
+        /* ─── Hero ─── */
+        .hero {
+            min-height: 100vh; display: flex; flex-direction: column; justify-content: center; align-items: center;
+            text-align: center; padding: 7rem 2rem 4rem; position: relative; overflow: hidden;
+        }
+        .hero-glow {
+            position: absolute; top: -200px; left: 50%; transform: translateX(-50%);
+            width: 900px; height: 600px; border-radius: 50%;
+            background: radial-gradient(ellipse, var(--accent-glow-strong) 0%, transparent 70%);
+            pointer-events: none; filter: blur(40px);
+        }
+        .hero-grid {
+            position: absolute; inset: 0; 
+            background-image: linear-gradient(var(--border) 1px, transparent 1px), linear-gradient(90deg, var(--border) 1px, transparent 1px);
+            background-size: 80px 80px;
+            mask-image: radial-gradient(ellipse 60% 50% at 50% 50%, black 20%, transparent 100%);
+            -webkit-mask-image: radial-gradient(ellipse 60% 50% at 50% 50%, black 20%, transparent 100%);
+        }
+        
+        .hero-content { position: relative; z-index: 2; max-width: 800px; }
+        
+        .hero-badge {
+            display: inline-flex; align-items: center; gap: 0.5rem;
+            padding: 0.4rem 1rem; background: var(--bg-tertiary); border: 1px solid var(--border);
+            border-radius: 100px; font-size: 0.8rem; color: var(--text-secondary); margin-bottom: 2rem;
+            animation: fadeInUp 0.6s ease both;
+        }
+        .hero-badge .dot { width: 6px; height: 6px; border-radius: 50%; background: var(--success); box-shadow: 0 0 8px var(--success); }
+        
+        .hero h1 {
+            font-size: clamp(2.75rem, 6vw, 4.5rem); font-weight: 800; line-height: 1.08;
+            margin-bottom: 1.25rem; letter-spacing: -0.03em;
+            animation: fadeInUp 0.6s ease 0.1s both;
+        }
+        .hero h1 .gradient {
+            background: linear-gradient(135deg, var(--gradient-1) 0%, var(--gradient-3) 100%);
+            -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+        }
+        
+        .hero-sub {
+            font-size: 1.2rem; color: var(--text-secondary); max-width: 560px; margin: 0 auto 2.5rem;
+            line-height: 1.7; animation: fadeInUp 0.6s ease 0.2s both;
+        }
+        
+        .hero-buttons {
+            display: flex; gap: 0.75rem; justify-content: center; flex-wrap: wrap;
+            animation: fadeInUp 0.6s ease 0.3s both;
+        }
+        
+        .hero-terminal {
+            margin-top: 4rem; max-width: 720px; width: 100%; position: relative; z-index: 2;
+            animation: fadeInUp 0.8s ease 0.45s both;
+        }
+        .terminal {
+            background: var(--code-bg); border: 1px solid var(--border); border-radius: 12px;
+            overflow: hidden; box-shadow: 0 25px 60px -12px rgba(0,0,0,0.6), 0 0 40px var(--accent-glow);
+        }
+        .terminal-bar {
+            display: flex; align-items: center; gap: 8px; padding: 14px 18px;
+            background: var(--bg-tertiary); border-bottom: 1px solid var(--border);
+        }
+        .terminal-dots { display: flex; gap: 7px; }
+        .terminal-dot { width: 11px; height: 11px; border-radius: 50%; }
+        .terminal-dot.r { background: #ff5f56; } .terminal-dot.y { background: #ffbd2e; } .terminal-dot.g { background: #27c93f; }
+        .terminal-title { flex: 1; text-align: center; color: var(--text-muted); font-size: 0.8rem; font-family: 'JetBrains Mono', monospace; }
+        .terminal-body { padding: 1.5rem; font-family: 'JetBrains Mono', monospace; font-size: 0.85rem; line-height: 1.8; }
+        .t-comment { color: #6a9955; } .t-cmd { color: var(--accent-lighter); } .t-flag { color: #fbbf24; }
+        .t-string { color: #ce9178; } .t-key { color: #9cdcfe; } .t-section { color: #4ec9b0; }
+        .t-prompt { color: var(--text-muted); user-select: none; }
+        
+        /* ─── Logos / Social proof ─── */
+        .social-proof {
+            padding: 4rem 2rem 2rem; text-align: center;
+            border-top: 1px solid var(--border);
+        }
+        .social-proof p { color: var(--text-muted); font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 2rem; }
+        .proof-items { display: flex; gap: 3rem; justify-content: center; align-items: center; flex-wrap: wrap; }
+        .proof-item { display: flex; align-items: center; gap: 0.5rem; color: var(--text-secondary); font-size: 0.95rem; font-weight: 500; }
+        .proof-item i { color: var(--accent-light); }
+        
+        /* ─── Features ─── */
+        .features { padding: 7rem 2rem; }
+        .section-label {
+            text-align: center; font-size: 0.8rem; text-transform: uppercase;
+            letter-spacing: 0.1em; color: var(--accent-light); font-weight: 600; margin-bottom: 0.75rem;
+        }
+        .section-title { text-align: center; font-size: 2.5rem; font-weight: 700; letter-spacing: -0.02em; margin-bottom: 0.75rem; }
+        .section-sub { text-align: center; color: var(--text-secondary); font-size: 1.05rem; max-width: 500px; margin: 0 auto 4rem; }
+        
+        .features-grid {
+            max-width: 1100px; margin: 0 auto;
+            display: grid; grid-template-columns: repeat(3, 1fr); gap: 1.25rem;
+        }
+        .feature-card {
+            background: var(--bg-card); border: 1px solid var(--border); border-radius: 14px;
+            padding: 2rem; transition: all 0.25s ease; position: relative; overflow: hidden;
+        }
+        .feature-card::before {
+            content: ''; position: absolute; top: 0; left: 0; right: 0; height: 1px;
+            background: linear-gradient(90deg, transparent, var(--accent-glow-strong), transparent);
+            opacity: 0; transition: opacity 0.3s;
+        }
+        .feature-card:hover { border-color: var(--border-hover); background: var(--bg-card-hover); transform: translateY(-2px); }
+        .feature-card:hover::before { opacity: 1; }
+        
+        .feature-icon {
+            width: 42px; height: 42px; border-radius: 10px; display: flex; align-items: center; justify-content: center;
+            margin-bottom: 1.25rem; background: linear-gradient(135deg, rgba(99,102,241,0.15), rgba(139,92,246,0.1));
+            border: 1px solid rgba(99,102,241,0.2);
+        }
+        .feature-icon i { width: 20px; height: 20px; color: var(--accent-light); }
+        .feature-card h3 { font-size: 1.05rem; font-weight: 600; margin-bottom: 0.5rem; }
+        .feature-card p { color: var(--text-secondary); font-size: 0.9rem; line-height: 1.6; }
+        
+        /* ─── Layout Showcase ─── */
+        .layouts { padding: 7rem 2rem; background: var(--bg-secondary); border-top: 1px solid var(--border); border-bottom: 1px solid var(--border); }
+        
+        .layout-tabs { display: flex; gap: 0.5rem; justify-content: center; margin-bottom: 3rem; flex-wrap: wrap; }
+        .layout-tab {
+            padding: 0.6rem 1.25rem; background: transparent; border: 1px solid var(--border);
+            border-radius: 8px; color: var(--text-secondary); cursor: pointer;
+            transition: all 0.2s; font-size: 0.875rem; font-weight: 500; font-family: inherit;
+        }
+        .layout-tab:hover { border-color: var(--border-hover); color: var(--text-primary); }
+        .layout-tab.active { background: var(--accent); border-color: var(--accent); color: white; }
+        
+        .layout-showcase {
+            max-width: 1000px; margin: 0 auto;
+            display: grid; grid-template-columns: 1fr 1fr; gap: 3rem; align-items: center;
+        }
+        
+        .layout-visual {
+            background: var(--bg-card); border: 1px solid var(--border); border-radius: 14px;
+            padding: 2rem; aspect-ratio: 16/11; position: relative;
+        }
+        .layout-visual-inner { width: 100%; height: 100%; }
+        
+        .layout-info h3 { font-size: 1.75rem; font-weight: 700; margin-bottom: 0.75rem; }
+        .layout-info > p { color: var(--text-secondary); margin-bottom: 1.5rem; font-size: 1rem; line-height: 1.7; }
+        .layout-features { list-style: none; }
+        .layout-features li { display: flex; align-items: flex-start; gap: 0.75rem; color: var(--text-secondary); margin-bottom: 0.625rem; font-size: 0.9rem; }
+        .layout-features li i { color: var(--success); width: 18px; height: 18px; margin-top: 2px; flex-shrink: 0; }
+        
+        /* ─── How It Works ─── */
+        .how-it-works { padding: 7rem 2rem; }
+        .steps { max-width: 800px; margin: 0 auto; display: flex; flex-direction: column; gap: 0rem; position: relative; }
+        .steps::before {
+            content: ''; position: absolute; left: 23px; top: 40px; bottom: 40px; width: 2px;
+            background: linear-gradient(to bottom, var(--accent), var(--border));
+        }
+        .step { display: flex; gap: 2rem; align-items: flex-start; padding: 1.5rem 0; }
+        .step-number {
+            width: 48px; height: 48px; border-radius: 12px; flex-shrink: 0;
+            background: var(--bg-tertiary); border: 1px solid var(--border);
+            display: flex; align-items: center; justify-content: center;
+            font-weight: 700; font-size: 1.1rem; color: var(--accent-light);
+            position: relative; z-index: 1;
+        }
+        .step-content h3 { font-size: 1.15rem; font-weight: 600; margin-bottom: 0.375rem; }
+        .step-content p { color: var(--text-secondary); font-size: 0.95rem; }
+        .step-content code {
+            background: var(--bg-tertiary); padding: 0.2rem 0.5rem; border-radius: 5px;
+            font-family: 'JetBrains Mono', monospace; font-size: 0.8rem; color: var(--accent-lighter);
+        }
+        
+        /* ─── Config Preview ─── */
+        .config-section { padding: 7rem 2rem; background: var(--bg-secondary); border-top: 1px solid var(--border); border-bottom: 1px solid var(--border); }
+        .config-grid { max-width: 1000px; margin: 0 auto; display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; }
+        .config-card {
+            background: var(--bg-card); border: 1px solid var(--border); border-radius: 12px; overflow: hidden;
+        }
+        .config-card-header {
+            padding: 1rem 1.25rem; background: var(--bg-tertiary); border-bottom: 1px solid var(--border);
+            display: flex; align-items: center; gap: 0.5rem;
+        }
+        .config-card-header i { color: var(--accent-light); width: 16px; height: 16px; }
+        .config-card-header span { color: var(--text-secondary); font-size: 0.8rem; font-family: 'JetBrains Mono', monospace; }
+        .config-card pre {
+            padding: 1.25rem; font-family: 'JetBrains Mono', monospace; font-size: 0.82rem;
+            line-height: 1.7; overflow-x: auto;
+        }
+        
+        /* ─── CTA ─── */
+        .cta {
+            padding: 8rem 2rem; text-align: center; position: relative; overflow: hidden;
+        }
+        .cta-glow {
+            position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+            width: 500px; height: 400px; border-radius: 50%;
+            background: radial-gradient(ellipse, var(--accent-glow) 0%, transparent 70%);
+            pointer-events: none; filter: blur(30px);
+        }
+        .cta-content { position: relative; z-index: 2; }
+        .cta h2 { font-size: 2.5rem; font-weight: 700; margin-bottom: 0.75rem; letter-spacing: -0.02em; }
+        .cta p { color: var(--text-secondary); font-size: 1.1rem; max-width: 450px; margin: 0 auto 2rem; }
+        .cta-buttons { display: flex; gap: 0.75rem; justify-content: center; flex-wrap: wrap; }
+        
+        /* ─── Footer ─── */
+        .footer {
+            padding: 3rem 2rem; border-top: 1px solid var(--border); text-align: center;
+        }
+        .footer-inner { max-width: 1200px; margin: 0 auto; }
+        .footer-links { display: flex; gap: 2rem; justify-content: center; margin-bottom: 1.25rem; flex-wrap: wrap; }
+        .footer-links a { color: var(--text-muted); text-decoration: none; font-size: 0.875rem; transition: color 0.2s; }
+        .footer-links a:hover { color: var(--text-secondary); }
+        .footer-credit { color: var(--text-muted); font-size: 0.8rem; }
+        .footer-credit a { color: var(--accent-light); text-decoration: none; }
+        .footer-credit a:hover { text-decoration: underline; }
+        
+        /* ─── Animations ─── */
+        @keyframes fadeInUp { from { opacity: 0; transform: translateY(16px); } to { opacity: 1; transform: translateY(0); } }
+        @keyframes terminalGlow {
+            0%, 100% { box-shadow: 0 25px 60px -12px rgba(0,0,0,0.6), 0 0 40px var(--accent-glow); }
+            50% { box-shadow: 0 25px 60px -12px rgba(0,0,0,0.6), 0 0 60px var(--accent-glow-strong); }
+        }
+        .terminal { animation: terminalGlow 4s ease-in-out infinite; }
+        
+        .fade-in { opacity: 0; transform: translateY(20px); transition: all 0.6s ease; }
+        .fade-in.visible { opacity: 1; transform: translateY(0); }
+        
+        .layout-visual-inner { transition: opacity 0.3s ease; }
+        .layout-visual-inner.switching { opacity: 0; }
+        
+        /* ─── Responsive ─── */
+        @media (max-width: 900px) {
+            .features-grid { grid-template-columns: repeat(2, 1fr); }
+            .layout-showcase { grid-template-columns: 1fr; }
+            .layout-visual { order: -1; }
+            .config-grid { grid-template-columns: 1fr; }
+        }
+        @media (max-width: 640px) {
+            .features-grid { grid-template-columns: 1fr; }
+            .nav-links { display: none; }
+            .mobile-menu-btn { display: flex; }
+            .hero h1 { font-size: 2.25rem; }
+            .section-title { font-size: 2rem; }
+            .steps::before { left: 19px; }
+            .step-number { width: 40px; height: 40px; font-size: 0.95rem; }
+        }
+        .mobile-menu-btn {
+            display: none; width: 40px; height: 40px; border-radius: 8px;
+            background: var(--bg-tertiary); border: 1px solid var(--border);
+            align-items: center; justify-content: center; cursor: pointer; color: var(--text-secondary);
+        }
+    </style>
+</head>
+<body>
+    <!-- Navbar -->
+    <nav class="navbar" id="navbar">
+        <div class="navbar-inner">
+            <a href="#" class="logo">
+                <div class="logo-icon">
+                    <i data-lucide="layout-grid" style="width: 16px; height: 16px; color: white;"></i>
+                </div>
+                layman
+            </a>
+            <div class="nav-links">
+                <a href="#features">Features</a>
+                <a href="#layouts">Layouts</a>
+                <a href="#install">Install</a>
+                <a href="https://github.com/mschulkind/layman/tree/main/docs">Docs</a>
+                <a href="https://github.com/mschulkind/layman" class="btn btn-ghost">
+                    <i data-lucide="github" style="width: 16px; height: 16px;"></i>
+                    GitHub
+                </a>
+            </div>
+            <a href="https://github.com/mschulkind/layman" class="mobile-menu-btn">
+                <i data-lucide="github" style="width: 18px; height: 18px;"></i>
+            </a>
+        </div>
+    </nav>
+
+    <!-- Hero -->
+    <section class="hero">
+        <div class="hero-glow"></div>
+        <div class="hero-grid"></div>
+        <div class="hero-content">
+            <div class="hero-badge">
+                <span class="dot"></span>
+                Open Source · GPL v3
+            </div>
+            <h1>
+                <span class="gradient">Per-workspace</span> tiling<br>layouts for Sway
+            </h1>
+            <p class="hero-sub">
+                MasterStack on workspace 1, Grid on workspace 2, Autotiling on workspace 3. 
+                Each workspace works the way you want it to.
+            </p>
+            <div class="hero-buttons">
+                <a href="#install" class="btn btn-primary btn-lg">
+                    <i data-lucide="terminal" style="width: 18px; height: 18px;"></i>
+                    Get Started
+                </a>
+                <a href="https://github.com/mschulkind/layman" class="btn btn-ghost btn-lg">
+                    <i data-lucide="github" style="width: 18px; height: 18px;"></i>
+                    View Source
+                </a>
+            </div>
+            
+            <div class="hero-terminal">
+                <div class="terminal">
+                    <div class="terminal-bar">
+                        <div class="terminal-dots">
+                            <div class="terminal-dot r"></div>
+                            <div class="terminal-dot y"></div>
+                            <div class="terminal-dot g"></div>
+                        </div>
+                        <div class="terminal-title">~/.config/sway/config</div>
+                    </div>
+                    <div class="terminal-body">
+                        <span class="t-comment"># Start the daemon</span><br>
+                        <span class="t-cmd">exec</span> layman<br><br>
+                        <span class="t-comment"># Switch layouts on the fly</span><br>
+                        <span class="t-cmd">bindsym</span> <span class="t-flag">$mod+m</span> nop layman layout set <span class="t-string">MasterStack</span><br>
+                        <span class="t-cmd">bindsym</span> <span class="t-flag">$mod+a</span> nop layman layout set <span class="t-string">Autotiling</span><br>
+                        <span class="t-cmd">bindsym</span> <span class="t-flag">$mod+g</span> nop layman layout set <span class="t-string">Grid</span><br><br>
+                        <span class="t-comment"># MasterStack controls</span><br>
+                        <span class="t-cmd">bindsym</span> <span class="t-flag">$mod+Return</span> nop layman window swap master<br>
+                        <span class="t-cmd">bindsym</span> <span class="t-flag">$mod+t</span> nop layman stack toggle
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Social Proof -->
+    <section class="social-proof">
+        <p>Built for the Sway & i3 community</p>
+        <div class="proof-items">
+            <div class="proof-item">
+                <i data-lucide="cpu" style="width: 20px; height: 20px;"></i>
+                Single daemon process
+            </div>
+            <div class="proof-item">
+                <i data-lucide="zap" style="width: 20px; height: 20px;"></i>
+                Zero-latency bindings
+            </div>
+            <div class="proof-item">
+                <i data-lucide="file-text" style="width: 20px; height: 20px;"></i>
+                Simple TOML config
+            </div>
+            <div class="proof-item">
+                <i data-lucide="puzzle" style="width: 20px; height: 20px;"></i>
+                Extensible with Python
+            </div>
+        </div>
+    </section>
+
+    <!-- Features -->
+    <section class="features" id="features">
+        <div class="section-label fade-in">Features</div>
+        <h2 class="section-title fade-in">Everything you need for<br>perfect window layouts</h2>
+        <p class="section-sub fade-in">One daemon, zero compromises.</p>
+        
+        <div class="features-grid">
+            <div class="feature-card fade-in">
+                <div class="feature-icon"><i data-lucide="layers"></i></div>
+                <h3>Per-Workspace Layouts</h3>
+                <p>Assign different layouts to each workspace. Code with MasterStack, monitor dashboards with Grid, browse with Autotiling.</p>
+            </div>
+            <div class="feature-card fade-in">
+                <div class="feature-icon"><i data-lucide="zap"></i></div>
+                <h3>Zero Latency</h3>
+                <p>Uses Sway's native <code>nop</code> binding mechanism. No process spawning, no delays — commands execute instantly.</p>
+            </div>
+            <div class="feature-card fade-in">
+                <div class="feature-icon"><i data-lucide="refresh-cw"></i></div>
+                <h3>Hot Reload</h3>
+                <p>Edit your config and reload without restarting. Tweak layouts on the fly without losing your window arrangement.</p>
+            </div>
+            <div class="feature-card fade-in">
+                <div class="feature-icon"><i data-lucide="sliders-horizontal"></i></div>
+                <h3>Runtime Control</h3>
+                <p>Switch layouts, rotate windows, toggle stack sides, resize master — all from keybindings. Full control, zero friction.</p>
+            </div>
+            <div class="feature-card fade-in">
+                <div class="feature-icon"><i data-lucide="code-2"></i></div>
+                <h3>Custom Layouts</h3>
+                <p>Write your own layouts in Python. Drop a file in your config directory — it loads automatically on startup and reload.</p>
+            </div>
+            <div class="feature-card fade-in">
+                <div class="feature-icon"><i data-lucide="feather"></i></div>
+                <h3>Minimal Footprint</h3>
+                <p>Single daemon process, simple TOML config, tiny memory footprint. Runs quietly in the background, stays out of your way.</p>
+            </div>
+        </div>
+    </section>
+
+    <!-- Layouts -->
+    <section class="layouts" id="layouts">
+        <div class="section-label fade-in">Layouts</div>
+        <h2 class="section-title fade-in">Five layouts out of the box</h2>
+        <p class="section-sub fade-in">Plus custom layouts via Python</p>
+        
+        <div class="container">
+            <div class="layout-tabs">
+                <button class="layout-tab active" data-layout="masterstack">MasterStack</button>
+                <button class="layout-tab" data-layout="autotiling">Autotiling</button>
+                <button class="layout-tab" data-layout="grid">Grid</button>
+                <button class="layout-tab" data-layout="threecolumn">ThreeColumn</button>
+                <button class="layout-tab" data-layout="tabbedpairs">TabbedPairs</button>
+            </div>
+            
+            <div class="layout-showcase">
+                <div class="layout-visual">
+                    <div class="layout-visual-inner" id="layout-visual"></div>
+                </div>
+                <div class="layout-info">
+                    <h3 id="layout-title">MasterStack</h3>
+                    <p id="layout-desc">A primary master window takes center stage, with remaining windows stacked beside it. New windows become master, pushing the old master to the stack.</p>
+                    <ul class="layout-features" id="layout-features-list">
+                        <li><i data-lucide="check"></i> Configurable master width (1–99%)</li>
+                        <li><i data-lucide="check"></i> Stack layouts: splitv, splith, tabbed, stacking</li>
+                        <li><i data-lucide="check"></i> Toggle stack side: left or right</li>
+                        <li><i data-lucide="check"></i> Rotate windows through positions</li>
+                        <li><i data-lucide="check"></i> Visible stack limit with substack</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- How It Works -->
+    <section class="how-it-works" id="install">
+        <div class="section-label fade-in">Quick Start</div>
+        <h2 class="section-title fade-in">Up and running in 60 seconds</h2>
+        <p class="section-sub fade-in">Four steps. That's it.</p>
+        
+        <div class="steps">
+            <div class="step fade-in">
+                <div class="step-number">1</div>
+                <div class="step-content">
+                    <h3>Install layman</h3>
+                    <p>Clone and install with pip or uv: <code>git clone ... && pip install .</code></p>
+                </div>
+            </div>
+            <div class="step fade-in">
+                <div class="step-number">2</div>
+                <div class="step-content">
+                    <h3>Create your config</h3>
+                    <p>One TOML file at <code>~/.config/layman/config.toml</code> — set your default layout and per-workspace overrides.</p>
+                </div>
+            </div>
+            <div class="step fade-in">
+                <div class="step-number">3</div>
+                <div class="step-content">
+                    <h3>Add to Sway config</h3>
+                    <p>Add <code>exec layman</code> and your keybindings using <code>nop</code> bindings for zero-latency control.</p>
+                </div>
+            </div>
+            <div class="step fade-in">
+                <div class="step-number">4</div>
+                <div class="step-content">
+                    <h3>Reload Sway</h3>
+                    <p>Press <code>$mod+Shift+c</code> and you're done. Layouts are active immediately.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Config Preview -->
+    <section class="config-section">
+        <div class="section-label fade-in">Configuration</div>
+        <h2 class="section-title fade-in">Simple, powerful config</h2>
+        <p class="section-sub fade-in">One TOML file controls everything</p>
+        
+        <div class="config-grid">
+            <div class="config-card fade-in">
+                <div class="config-card-header">
+                    <i data-lucide="file-code"></i>
+                    <span>config.toml</span>
+                </div>
+                <pre><code><span class="t-section">[layman]</span>
+<span class="t-key">defaultLayout</span> = <span class="t-string">"MasterStack"</span>
+<span class="t-key">masterWidth</span>   = <span class="t-string">50</span>
+<span class="t-key">stackLayout</span>  = <span class="t-string">"splitv"</span>
+<span class="t-key">stackSide</span>    = <span class="t-string">"right"</span>
+
+<span class="t-comment"># Per-workspace overrides</span>
+<span class="t-section">[workspace.2]</span>
+<span class="t-key">defaultLayout</span> = <span class="t-string">"Autotiling"</span>
+
+<span class="t-section">[workspace.3]</span>
+<span class="t-key">defaultLayout</span> = <span class="t-string">"Grid"</span></code></pre>
+            </div>
+            <div class="config-card fade-in">
+                <div class="config-card-header">
+                    <i data-lucide="keyboard"></i>
+                    <span>sway config</span>
+                </div>
+                <pre><code><span class="t-comment"># Start the daemon</span>
+<span class="t-cmd">exec</span> layman
+
+<span class="t-comment"># Layout switching</span>
+<span class="t-cmd">bindsym</span> <span class="t-flag">$mod+m</span> nop layman layout set <span class="t-string">MasterStack</span>
+<span class="t-cmd">bindsym</span> <span class="t-flag">$mod+a</span> nop layman layout set <span class="t-string">Autotiling</span>
+
+<span class="t-comment"># Window controls</span>
+<span class="t-cmd">bindsym</span> <span class="t-flag">$mod+Return</span> nop layman window swap master
+<span class="t-cmd">bindsym</span> <span class="t-flag">$mod+t</span> nop layman stack toggle</code></pre>
+            </div>
+        </div>
+    </section>
+
+    <!-- CTA -->
+    <section class="cta">
+        <div class="cta-glow"></div>
+        <div class="cta-content">
+            <h2>Ready to take control?</h2>
+            <p>Start using per-workspace layouts in under a minute. Open source, free forever.</p>
+            <div class="cta-buttons">
+                <a href="https://github.com/mschulkind/layman" class="btn btn-primary btn-lg">
+                    <i data-lucide="github" style="width: 18px; height: 18px;"></i>
+                    Get Started on GitHub
+                </a>
+                <a href="https://github.com/mschulkind/layman/tree/main/docs" class="btn btn-ghost btn-lg">
+                    <i data-lucide="book-open" style="width: 18px; height: 18px;"></i>
+                    Read the Docs
+                </a>
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <div class="footer-inner">
+            <div class="footer-links">
+                <a href="https://github.com/mschulkind/layman">GitHub</a>
+                <a href="https://github.com/mschulkind/layman/tree/main/docs">Documentation</a>
+                <a href="https://github.com/mschulkind/layman/issues">Issues</a>
+                <a href="https://github.com/mschulkind/layman/blob/main/LICENSE">License</a>
+            </div>
+            <p class="footer-credit">
+                Inspired by <a href="https://github.com/mschulkind/layman">layman</a> by Joe Maples · Licensed under GPL v3
+            </p>
+        </div>
+    </footer>
+
+    <script>
+        // Initialize Lucide
+        lucide.createIcons();
+        
+        // Navbar scroll effect
+        window.addEventListener('scroll', () => {
+            document.getElementById('navbar').classList.toggle('scrolled', window.scrollY > 50);
+        });
+        
+        // Intersection Observer for fade-in
+        const observer = new IntersectionObserver((entries) => {
+            entries.forEach((entry, i) => {
+                if (entry.isIntersecting) {
+                    setTimeout(() => entry.target.classList.add('visible'), i * 60);
+                    observer.unobserve(entry.target);
+                }
+            });
+        }, { threshold: 0.1, rootMargin: '0px 0px -50px 0px' });
+        
+        document.querySelectorAll('.fade-in').forEach(el => observer.observe(el));
+        
+        // Layout data
+        const layouts = {
+            masterstack: {
+                title: 'MasterStack',
+                desc: 'A primary master window takes center stage, with remaining windows stacked beside it. New windows become master, pushing the old master to the stack.',
+                features: [
+                    'Configurable master width (1–99%)',
+                    'Stack layouts: splitv, splith, tabbed, stacking',
+                    'Toggle stack side: left or right',
+                    'Rotate windows through positions',
+                    'Visible stack limit with substack'
+                ],
+                visual: '<div style="display:grid;grid-template-columns:1.5fr 1fr;gap:0.75rem;height:100%"><div style="background:linear-gradient(135deg,var(--gradient-1),var(--gradient-2));border-radius:10px;display:flex;align-items:center;justify-content:center;color:white;font-weight:600;font-size:1.1rem">Master</div><div style="display:flex;flex-direction:column;gap:0.5rem"><div style="flex:1;background:var(--bg-tertiary);border:1px solid var(--border);border-radius:8px;display:flex;align-items:center;justify-content:center;color:var(--text-muted);font-size:0.85rem">Stack 1</div><div style="flex:1;background:var(--bg-tertiary);border:1px solid var(--border);border-radius:8px;display:flex;align-items:center;justify-content:center;color:var(--text-muted);font-size:0.85rem">Stack 2</div><div style="flex:1;background:var(--bg-tertiary);border:1px solid var(--border);border-radius:8px;display:flex;align-items:center;justify-content:center;color:var(--text-muted);font-size:0.85rem">Stack 3</div></div></div>'
+            },
+            autotiling: {
+                title: 'Autotiling',
+                desc: 'Alternates between horizontal and vertical splits based on window dimensions, creating a natural spiral-like pattern that adapts to your screen.',
+                features: [
+                    'Automatic split direction based on container size',
+                    'Natural, balanced layouts without configuration',
+                    'Configurable depth limit',
+                    'Great for general-purpose workspaces',
+                    'Inspired by nwg-piotr\'s autotiling'
+                ],
+                visual: '<div style="display:grid;grid-template-columns:1fr 2fr;gap:0.5rem;height:100%"><div style="background:linear-gradient(135deg,var(--gradient-1),var(--gradient-2));border-radius:10px;display:flex;align-items:center;justify-content:center;color:white;font-weight:600">1</div><div style="display:grid;grid-template-rows:1fr 1fr;gap:0.5rem"><div style="background:var(--bg-tertiary);border:1px solid var(--border);border-radius:8px;display:flex;align-items:center;justify-content:center;color:var(--text-muted)">2</div><div style="display:grid;grid-template-columns:1fr 1fr;gap:0.5rem"><div style="background:var(--bg-tertiary);border:1px solid var(--border);border-radius:8px;display:flex;align-items:center;justify-content:center;color:var(--text-muted)">3</div><div style="background:var(--bg-tertiary);border:1px solid var(--border);border-radius:8px;display:flex;align-items:center;justify-content:center;color:var(--text-muted)">4</div></div></div></div>'
+            },
+            grid: {
+                title: 'Grid',
+                desc: 'Distributes windows evenly by always splitting the largest container. Perfect for monitoring dashboards or when you want equal-sized windows.',
+                features: [
+                    'Automatic even distribution',
+                    'Always splits the largest container',
+                    'Perfect for monitoring dashboards',
+                    'No configuration needed',
+                    'Scales naturally with window count'
+                ],
+                visual: '<div style="display:grid;grid-template-columns:1fr 1fr;grid-template-rows:1fr 1fr;gap:0.5rem;height:100%"><div style="background:linear-gradient(135deg,var(--gradient-1),var(--gradient-2));border-radius:10px;display:flex;align-items:center;justify-content:center;color:white;font-weight:600">1</div><div style="background:var(--bg-tertiary);border:1px solid var(--border);border-radius:8px;display:flex;align-items:center;justify-content:center;color:var(--text-muted)">2</div><div style="background:var(--bg-tertiary);border:1px solid var(--border);border-radius:8px;display:flex;align-items:center;justify-content:center;color:var(--text-muted)">3</div><div style="background:var(--bg-tertiary);border:1px solid var(--border);border-radius:8px;display:flex;align-items:center;justify-content:center;color:var(--text-muted)">4</div></div>'
+            },
+            threecolumn: {
+                title: 'ThreeColumn',
+                desc: 'Three distinct columns — a wide center master with two side columns. Ideal for ultrawide monitors or workflows that need reference material on both sides.',
+                features: [
+                    'Wide center column for primary work',
+                    'Left and right side columns',
+                    'Configurable column widths',
+                    'Ideal for ultrawide monitors',
+                    'Swap windows between columns'
+                ],
+                visual: '<div style="display:grid;grid-template-columns:1fr 1.5fr 1fr;gap:0.5rem;height:100%"><div style="display:flex;flex-direction:column;gap:0.5rem"><div style="flex:1;background:var(--bg-tertiary);border:1px solid var(--border);border-radius:8px;display:flex;align-items:center;justify-content:center;color:var(--text-muted);font-size:0.85rem">Left 1</div><div style="flex:1;background:var(--bg-tertiary);border:1px solid var(--border);border-radius:8px;display:flex;align-items:center;justify-content:center;color:var(--text-muted);font-size:0.85rem">Left 2</div></div><div style="background:linear-gradient(135deg,var(--gradient-1),var(--gradient-2));border-radius:10px;display:flex;align-items:center;justify-content:center;color:white;font-weight:600">Master</div><div style="display:flex;flex-direction:column;gap:0.5rem"><div style="flex:1;background:var(--bg-tertiary);border:1px solid var(--border);border-radius:8px;display:flex;align-items:center;justify-content:center;color:var(--text-muted);font-size:0.85rem">Right 1</div><div style="flex:1;background:var(--bg-tertiary);border:1px solid var(--border);border-radius:8px;display:flex;align-items:center;justify-content:center;color:var(--text-muted);font-size:0.85rem">Right 2</div></div></div>'
+            },
+            tabbedpairs: {
+                title: 'TabbedPairs',
+                desc: 'Groups windows into tabbed pairs, keeping your workspace organized while maximizing screen real estate for each pair.',
+                features: [
+                    'Windows grouped into tabbed pairs',
+                    'Maximizes visible space per window',
+                    'Easy tab switching with keybindings',
+                    'Clean, organized workspace',
+                    'Great for compare workflows'
+                ],
+                visual: '<div style="display:grid;grid-template-columns:1fr 1fr;gap:0.75rem;height:100%"><div style="display:flex;flex-direction:column;border-radius:10px;overflow:hidden;border:1px solid var(--border)"><div style="background:var(--bg-tertiary);padding:0.4rem 0.75rem;display:flex;gap:0.25rem;border-bottom:1px solid var(--border)"><span style="background:var(--accent);color:white;padding:0.15rem 0.5rem;border-radius:4px;font-size:0.7rem">Tab A</span><span style="color:var(--text-muted);padding:0.15rem 0.5rem;font-size:0.7rem">Tab B</span></div><div style="flex:1;background:linear-gradient(135deg,var(--gradient-1),var(--gradient-2));display:flex;align-items:center;justify-content:center;color:white;font-weight:600">Window A</div></div><div style="display:flex;flex-direction:column;border-radius:10px;overflow:hidden;border:1px solid var(--border)"><div style="background:var(--bg-tertiary);padding:0.4rem 0.75rem;display:flex;gap:0.25rem;border-bottom:1px solid var(--border)"><span style="color:var(--text-muted);padding:0.15rem 0.5rem;font-size:0.7rem">Tab C</span><span style="background:var(--accent);color:white;padding:0.15rem 0.5rem;border-radius:4px;font-size:0.7rem">Tab D</span></div><div style="flex:1;background:var(--bg-tertiary);display:flex;align-items:center;justify-content:center;color:var(--text-muted)">Window D</div></div></div>'
+            }
+        };
+        
+        // Tab switching
+        document.querySelectorAll('.layout-tab').forEach(tab => {
+            tab.addEventListener('click', () => {
+                const key = tab.dataset.layout;
+                const data = layouts[key];
+                
+                document.querySelectorAll('.layout-tab').forEach(t => t.classList.remove('active'));
+                tab.classList.add('active');
+                
+                document.getElementById('layout-title').textContent = data.title;
+                document.getElementById('layout-desc').textContent = data.desc;
+                const visual = document.getElementById('layout-visual');
+                visual.classList.add('switching');
+                setTimeout(() => {
+                    visual.innerHTML = data.visual;
+                    visual.classList.remove('switching');
+                }, 150);
+                
+                const list = document.getElementById('layout-features-list');
+                list.innerHTML = data.features.map(f => '<li><i data-lucide="check"></i> ' + f + '</li>').join('');
+                lucide.createIcons();
+            });
+        });
+        
+        // Initialize first layout
+        document.getElementById('layout-visual').innerHTML = layouts.masterstack.visual;
+    </script>
+</body>
+</html>
