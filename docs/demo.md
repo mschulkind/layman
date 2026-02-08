@@ -42,9 +42,10 @@ The site is deployed automatically via Cloudflare Pages.
 
 ### How it works
 
-1. Cloudflare runs the build command configured in Project Settings:
+1. Cloudflare detects the root `package.json` and runs the `build` script:
    `cd site && npm install && npm run build`
 2. Astro builds the landing page, demo, and 404 page into `site/dist/`.
+
 
 3. All JS/CSS assets get content-hashed filenames (e.g.,
    `_astro/App.Bojvjspf.js`) for aggressive caching.
