@@ -514,6 +514,93 @@ class TestPushWindow:
         # By default, new windows get inserted at index 0 (new master)
         assert basic_manager.windowIds[0] == 300
 
+    def test_pushWindow_thirdWindow_reappliesMasterWidth(
+        self, mock_connection, temp_config
+    ):
+        """Regression: swapping in a new master must re-apply the configured
+        masterWidth.  Before the fix, rapid window additions (e.g. Chromium
+        opening many tabs) would leave sway at its 50 % default because
+        setMasterWidth was only called on the 1→2 window transition."""
+        config = temp_config(
+            '[layman]\ndefaultLayout = "MasterStack"\nmasterWidth = 75\n'
+        )
+        workspace = MockCon(name="1", type="workspace")
+        manager = MasterStackLayoutManager(
+            mock_connection, workspace, "1", config
+        )
+        # Simulate the first two windows (creates master/stack, sets width once)
+        manager.windowIds = [100, 200]
+
+        mock_connection.clear_commands()
+        window = MockCon(id=300)
+        manager.pushWindow(workspace, window)
+
+        # The new master swap should have triggered a resize command
+        resize_cmds = [
+            c for c in mock_connection.commands_executed
+            if "resize set width 75 ppt" in c
+        ]
+        assert len(resize_cmds) >= 1, (
+            "setMasterWidth must be called when a new master is swapped in; "
+            f"commands were: {mock_connection.commands_executed}"
+        )
+
+    def test_pushWindow_manyRapidWindows_masterWidthReapplied(
+        self, mock_connection, temp_config
+    ):
+        """Regression: opening many windows rapidly (like Chromium on startup)
+        must re-apply masterWidth after each new-master swap, not just once."""
+        config = temp_config(
+            '[layman]\ndefaultLayout = "MasterStack"\nmasterWidth = 75\n'
+        )
+        workspace = MockCon(name="1", type="workspace")
+        manager = MasterStackLayoutManager(
+            mock_connection, workspace, "1", config
+        )
+        # Start with 2 windows already set up
+        manager.windowIds = [100, 200]
+
+        # Add 10 more windows rapidly (simulating Chromium tabs)
+        for i in range(10):
+            mock_connection.clear_commands()
+            window = MockCon(id=300 + i)
+            manager.pushWindow(workspace, window)
+
+            resize_cmds = [
+                c for c in mock_connection.commands_executed
+                if "resize set width 75 ppt" in c
+            ]
+            assert len(resize_cmds) >= 1, (
+                f"setMasterWidth not called after adding window {300 + i}; "
+                f"commands were: {mock_connection.commands_executed}"
+            )
+
+
+class TestArrangeWindows:
+    """Tests for arrangeWindows applying masterWidth."""
+
+    def test_arrangeWindows_appliesMasterWidth(
+        self, mock_connection, temp_config
+    ):
+        """Regression: arrangeWindows must apply masterWidth after all windows
+        are placed, ensuring the configured ratio is enforced at init time."""
+        config = temp_config(
+            '[layman]\ndefaultLayout = "MasterStack"\nmasterWidth = 75\n'
+        )
+        workspace = create_workspace(name="1", window_count=5)
+        manager = MasterStackLayoutManager(
+            mock_connection, workspace, "1", config
+        )
+        # arrangeWindows is called in __init__ when workspace has windows
+        resize_cmds = [
+            c for c in mock_connection.commands_executed
+            if "resize set width 75 ppt" in c
+        ]
+        assert len(resize_cmds) >= 1, (
+            "arrangeWindows must call setMasterWidth after arranging; "
+            f"commands were: {mock_connection.commands_executed}"
+        )
+
 
 class TestPopWindow:
     """Tests for popWindow() method."""

@@ -224,9 +224,7 @@ class MasterStackLayoutManager(WorkspaceLayoutManager):
             old_width = self.lastKnownMasterWidth
             self.lastKnownMasterWidth = master.rect.width
             if old_width != self.lastKnownMasterWidth:
-                self.log(
-                    f"Master width updated: {old_width}px → {master.rect.width}px"
-                )
+                self.log(f"Master width updated: {old_width}px → {master.rect.width}px")
 
     def windowFloating(self, event, workspace, window):
         if self.isFloating(window):
@@ -435,6 +433,10 @@ class MasterStackLayoutManager(WorkspaceLayoutManager):
 
         self.removeExtraNesting(workspace)
 
+        # Ensure configured master width is applied after all rearrangement
+        if len(self.windowIds) >= 2:
+            self.setMasterWidth()
+
         # Multi-master: arrange master area for multiple masters
         if self.masterCount > 1 and len(self.windowIds) > self.masterCount:
             self._arrangeMultiMaster()
@@ -516,6 +518,10 @@ class MasterStackLayoutManager(WorkspaceLayoutManager):
             self.setStackLayout()
             self.setMasterWidth()
             self.removeExtraNesting(workspace)
+        elif positionAtIndex == 0 and len(self.windowIds) > 2:
+            # A new master was swapped in. The swap/move operations can disrupt the
+            # master width ratio, so re-apply it.
+            self.setMasterWidth()
 
     def popWindow(self, window: Con):
         self.log(f"Removing window id: {window.id}")
