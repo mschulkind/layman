@@ -13,7 +13,7 @@
 curl -LsSf https://astral.sh/uv/install.sh | sh
 
 # Clone and setup
-git clone https://github.com/frap129/layman
+git clone https://github.com/mschulkind/layman
 cd layman
 uv sync
 
@@ -24,7 +24,7 @@ uv run layman
 ## Installation with pip
 
 ```bash
-git clone https://github.com/frap129/layman
+git clone https://github.com/mschulkind/layman
 cd layman
 pip install -e .
 

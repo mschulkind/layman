@@ -10,10 +10,10 @@ This document tracks decisions needing your input for the project rebrand/fork.
 
 ### 1. Project Name
 
-**Current:** layman  
-**Upstream reference:** [frap129/layman](https://github.com/frap129/layman)
+**Current:** layman
+**Upstream inspiration:** [mschulkind/layman](https://github.com/mschulkind/layman)
 
-**Choose a name from below or suggest your own:**
+**Pick a name from below, or suggest your own:**
 
 _Your choice:_ _______________
 
@@ -21,10 +21,12 @@ _Your choice:_ _______________
 
 ### 2. Tagline / One-liner
 
-What's the elevator pitch? Examples:
+What's the elevator pitch? Some ideas:
+
 - "Intelligent layout management for Sway and i3"
 - "Per-workspace tiling layouts that just work"
 - "Take control of your window layouts"
+- "Your windows, your rules"
 
 _Your tagline:_ _______________
 
@@ -33,6 +35,7 @@ _Your tagline:_ _______________
 ### 3. Target Audience
 
 Who is this for?
+
 - [ ] Power users who want fine control
 - [ ] Sway/i3 newcomers looking for sensible defaults
 - [ ] Both (design for beginners, depth for power users)
@@ -43,10 +46,12 @@ _Your answer:_ _______________
 
 ### 4. Upstream Attribution
 
-How do you want to credit the original?
-- [ ] "Inspired by layman" in README
+How do you want to credit the original project?
+
+- [ ] "Inspired by layman" in README footer
 - [ ] "Fork of layman" with link
-- [ ] More subtle "Based on work by frap129"
+- [ ] "Based on work by frap129" — more subtle
+- [ ] Something else: _______________
 
 _Your preference:_ _______________
 
@@ -54,128 +59,162 @@ _Your preference:_ _______________
 
 ### 5. Landing Page Branding
 
-- Primary color preference? (teal/blue works well for dev tools)
+- Primary color preference? (current: indigo/purple, options: teal, blue, emerald, orange)
 - Dark mode only, light mode only, or both?
-- Any visual style inspiration? (minimal, techy, friendly)
+- Visual style? (minimal, techy, friendly, brutalist)
 
 _Your preferences:_ _______________
 
 ---
 
-### 6. Additional Features to Highlight
+### 6. Features to Highlight
 
-Beyond the core features, what else should the landing page emphasize?
+Beyond core features, what should we emphasize?
+
 - [ ] Systemd integration
 - [ ] Custom Python layouts
 - [ ] Low resource usage
-- [ ] Active development/roadmap
+- [ ] Active development / roadmap
+- [ ] ThreeColumn and TabbedPairs layouts
+- [ ] Session management
+- [ ] Window rules
 - [ ] Other: _______________
+
+---
+
+### 7. i3 Support Prominence
+
+How prominently should i3 be featured?
+
+- [ ] Equal billing: "for Sway and i3"
+- [ ] Sway-first: "for Sway (also works with i3)"
+- [ ] Sway-only: don't mention i3
+
+_Your answer:_ _______________
+
+---
+
+### 8. Package Distribution
+
+Will you maintain distribution packages?
+
+- [ ] AUR package
+- [ ] PyPI package
+- [ ] Nix flake
+- [ ] Homebrew (if applicable)
+- [ ] Just source install for now
+
+_Your answer:_ _______________
+
+---
+
+### 9. Demo Content
+
+- Should I keep existing GIFs or do you want new ones?
+- Any specific workflows you'd want to showcase?
+
+_Your answer:_ _______________
+
+---
+
+### 10. GitHub Organization
+
+- Repo under your personal GitHub, or a new org?
+- Custom domain for the website? (e.g., projectname.dev)
+
+_Your answer:_ _______________
 
 ---
 
 ## Name Ideas (50 suggestions)
 
-### Category: Layout/Arrangement Themed
-1. **Arranger** — arranges your windows
-2. **Mosaic** — creates patterns from tiles
-3. **Tessera** — small tile in a mosaic
-4. **Quilter** — stitches together pieces
-5. **Lattice** — grid-like structure
-6. **Parquet** — patterned flooring (tiles)
-7. **Gridlock** — locked into a grid (playful)
-8. **Compose** — composing layouts
-9. **Arrange** — simple, direct
-10. **Formation** — organizing into formations
+### Category: Layout / Arrangement
 
-### Category: Architecture/Building
-11. **Scaffold** — supporting structure
-12. **Stratum** — layered arrangement
-13. **Plinth** — foundation/base
-14. **Keystone** — central supporting piece
-15. **Masonry** — building with blocks
-16. **Blueprint** — the plan for arrangement
-17. **Framework** — structural support
-18. **Cornerstone** — foundational element
-19. **Joist** — structural timber
-20. **Girder** — main support beam
+| #  | Name         | Why                                        |
+|----|--------------|---------------------------------------------|
+| 1  | **Mosaic**   | Creates patterns from tiles                 |
+| 2  | **Tessera**  | A single tile in a mosaic — elegant, unique |
+| 3  | **Lattice**  | Grid-like structure                         |
+| 4  | **Parquet**  | Patterned flooring, tiling metaphor         |
+| 5  | **Compose**  | Composing layouts together                  |
+| 6  | **Arranger** | Arranges your windows                       |
+| 7  | **Formation**| Organizing into formations                  |
+| 8  | **Quilter**  | Stitches pieces together                    |
+| 9  | **Inlay**    | Precisely fitted pieces                     |
+| 10 | **Tableau**  | Arranged display                            |
 
-### Category: Geometry/Math
-21. **Vertex** — point where lines meet
-22. **Vector** — direction and magnitude
-23. **Tangent** — touching at a point
-24. **Polygon** — multi-sided shape
-25. **Axiom** — fundamental principle
-26. **Matrix** — grid arrangement
-27. **Sector** — divided section
-28. **Quadrant** — one of four sections
-29. **Prism** — geometric solid
-30. **Facet** — one face of many
+### Category: Architecture / Building
 
-### Category: Nature/Organic
-31. **Hive** — organized cellular structure
-32. **Colony** — organized community
-33. **Grove** — organized group of trees
-34. **Reef** — structured ecosystem
-35. **Arbor** — structured garden element
-36. **Canopy** — covering layer
-37. **Thicket** — dense arrangement
-38. **Bramble** — interwoven structure
-39. **Trellis** — supporting framework
-40. **Weave** — interlocking pattern
+| #  | Name          | Why                                     |
+|----|---------------|------------------------------------------|
+| 11 | **Scaffold**  | Supporting structure                     |
+| 12 | **Stratum**   | Layered arrangement                      |
+| 13 | **Keystone**  | Central supporting piece                 |
+| 14 | **Masonry**   | Building with blocks                     |
+| 15 | **Joist**     | Structural timber — short, punchy        |
+| 16 | **Girder**    | Main support beam                        |
+| 17 | **Lintel**    | Beam over an opening                     |
+| 18 | **Plinth**    | Foundation / base                        |
+| 19 | **Cornice**   | Ornamental top edge                      |
+| 20 | **Atrium**    | Open central space                       |
+
+### Category: Geometry / Math
+
+| #  | Name         | Why                                       |
+|----|--------------|-------------------------------------------|
+| 21 | **Vertex**   | Point where lines meet                    |
+| 22 | **Tangent**  | Touching at a point                       |
+| 23 | **Axiom**    | Fundamental principle                     |
+| 24 | **Sector**   | Divided section                           |
+| 25 | **Facet**    | One face of many                          |
+| 26 | **Prism**    | Geometric solid — light refraction        |
+| 27 | **Polygon**  | Multi-sided shape                         |
+| 28 | **Quadrant** | One of four sections                      |
+| 29 | **Hexa**     | Six-sided, honeycomb vibes                |
+| 30 | **Apex**     | The highest point                         |
+
+### Category: Nature / Organic
+
+| #  | Name         | Why                                       |
+|----|--------------|-------------------------------------------|
+| 31 | **Hive**     | Organized cellular structure              |
+| 32 | **Grove**    | Organized group — calm, natural           |
+| 33 | **Reef**     | Structured ecosystem                      |
+| 34 | **Arbor**    | Structured garden element                 |
+| 35 | **Canopy**   | Covering layer                            |
+| 36 | **Trellis**  | Supporting framework for growth           |
+| 37 | **Weave**    | Interlocking pattern                      |
+| 38 | **Thicket**  | Dense arrangement                         |
+| 39 | **Bramble**  | Interwoven structure                      |
+| 40 | **Fern**     | Fractal, self-similar — like autotiling   |
 
 ### Category: Short & Punchy
-41. **Pane** — window pane (direct!)
-42. **Slab** — solid block
-43. **Tier** — layered levels
-44. **Rack** — organized holder
-45. **Crate** — container/organizer
-46. **Stack** — piled arrangement
-47. **Slot** — designated space
-48. **Bloc** — grouped unit
-49. **Span** — stretched across
-50. **Vantage** — strategic viewpoint (also "point of view" for layouts)
+
+| #  | Name        | Why                                        |
+|----|-------------|---------------------------------------------|
+| 41 | **Pane**    | Window pane — dead simple                   |
+| 42 | **Slab**    | Solid block                                 |
+| 43 | **Tier**    | Layered levels                              |
+| 44 | **Bloc**    | Grouped unit — European flair               |
+| 45 | **Span**    | Stretched across                            |
+| 46 | **Vantage** | Strategic viewpoint — suggests perspective  |
+| 47 | **Nook**    | A corner or space — cozy, memorable         |
+| 48 | **Drift**   | Smooth movement — windows drifting into place|
+| 49 | **Cove**    | Sheltered space                             |
+| 50 | **Forge**   | Creating / shaping — power tool vibes       |
 
 ---
 
 ## My Recommendations (Top 5)
 
-Based on memorability, domain availability likelihood, and fit:
+Based on memorability, uniqueness, domain availability likelihood, and fit:
 
-1. **Vantage** — unique, suggests perspective/control, professional feel
+1. **Vantage** — unique, suggests perspective and control, professional feel
 2. **Tessera** — elegant, directly relates to tiling, distinctive
-3. **Mosaic** — immediately evokes tiling patterns, friendly
+3. **Mosaic** — immediately evokes tiling patterns, friendly and approachable
 4. **Trellis** — suggests structure and support, nature-tech balance
-5. **Pane** — dead simple, window-related, easy to remember
+5. **Pane** — dead simple, window-related, very easy to remember
 
 ---
 
-## Questions That Came Up
-
-### Q1: Service Management
-Should the README cover systemd service setup prominently, or is that optional/advanced?
-
-_Your answer:_ _______________
-
-### Q2: AUR Package
-The original has an AUR package. Will you maintain one, or should we remove that reference?
-
-_Your answer:_ _______________
-
-### Q3: i3 Support
-How prominently should i3 be featured? Primary focus Sway, with i3 as "also works"?
-
-_Your answer:_ _______________
-
-### Q4: Custom Layouts
-Is the custom Python layout feature a key differentiator to highlight?
-
-_Your answer:_ _______________
-
-### Q5: Demo GIFs
-Should I keep the existing GIFs or would you like new ones made?
-
-_Your answer:_ _______________
-
----
-
-*Last updated: 2026-02-08*
+*Last updated: 2026-02-07*

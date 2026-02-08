@@ -2,65 +2,83 @@
 
 # layman
 
-**Intelligent layout management for Sway and i3**
+**Per-workspace tiling layouts for Sway and i3**
 
-Per-workspace tiling layouts that adapt to how you work.
+Different layouts on every workspace — MasterStack, Autotiling, Grid, and more.
 
 [![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](LICENSE)
 [![Python 3.10+](https://img.shields.io/badge/python-3.10+-blue.svg)](https://www.python.org/downloads/)
 
-[Features](#features) • [Installation](#installation) • [Quick Start](#quick-start) • [Configuration](#configuration) • [Commands](#commands) • [Layouts](#layouts)
+[Features](#features) · [Quick Start](#-quick-start) · [Layouts](#-layouts) · [Configuration](#-configuration) · [Commands](#-commands) · [Contributing](docs/DEVELOPMENT.md)
 
 </div>
 
 ---
 
+<div align="center">
+
 ![MasterStack Demo](docs/MasterStack.gif)
+
+</div>
 
 ## Features
 
-- 🖥️ **Per-workspace layouts** — MasterStack on workspace 1, Grid on workspace 2, Autotiling on workspace 3
-- ⚡ **Zero-latency commands** — use `nop` bindings for instant response without spawning processes
-- 🔄 **Hot reload** — change your config and reload without restarting
-- 🎛️ **Runtime control** — switch layouts, rotate windows, toggle stack sides on the fly
-- 🐍 **Extensible** — write custom layouts in Python
-- 💾 **Minimal footprint** — single daemon, simple TOML config
+- 🖥️ **Per-workspace layouts** — MasterStack for coding, Grid for dashboards, Autotiling for everything else
+- ⚡ **Zero-latency** — `nop` bindings for instant response, no process spawning
+- 🔄 **Hot reload** — change config and reload without restarting
+- 🎛️ **Full runtime control** — switch layouts, rotate windows, toggle stacks via keybindings
+- 🐍 **Extensible** — write custom layouts in Python, auto-loaded from your config dir
+- 💾 **Minimal** — single daemon process, simple TOML config
 
-## Installation
+## 🚀 Quick Start
 
-### From Source (recommended)
+### 1. Install
 
 ```bash
-git clone https://github.com/frap129/layman
+git clone https://github.com/mschulkind/layman
 cd layman
 pip install .
 ```
 
-### With uv (faster)
+<details>
+<summary><strong>Alternative: install with uv (faster)</strong></summary>
 
 ```bash
-git clone https://github.com/frap129/layman
+git clone https://github.com/mschulkind/layman
 cd layman
-uv sync
-uv tool install .
+uv sync && uv tool install .
 ```
 
-## Quick Start
+</details>
 
-**1. Create your config file:**
+### 2. Create your config
 
 ```bash
 mkdir -p ~/.config/layman
-cat > ~/.config/layman/config.toml << 'EOF'
-[layman]
-defaultLayout = "MasterStack"
-EOF
 ```
 
-**2. Add to your Sway config** (`~/.config/sway/config`):
+```toml
+# ~/.config/layman/config.toml
+[layman]
+defaultLayout = "MasterStack"
+masterWidth = 50
+stackLayout = "splitv"
+stackSide = "right"
+
+# Per-workspace overrides
+[workspace.2]
+defaultLayout = "Autotiling"
+
+[workspace.3]
+defaultLayout = "Grid"
+```
+
+### 3. Add to your Sway config
+
+Add these lines to `~/.config/sway/config`:
 
 ```bash
-# Start layman daemon
+# Start the daemon
 exec layman
 
 # Switch layouts
@@ -71,94 +89,34 @@ bindsym $mod+g nop layman layout set Grid
 # MasterStack controls
 bindsym $mod+Return nop layman window swap master
 bindsym $mod+t nop layman stack toggle
+bindsym $mod+l nop layman stack side toggle
 ```
 
-**3. Reload Sway** (`$mod+Shift+c`) — you're done!
+### 4. Reload Sway
 
-## Configuration
+Press `$mod+Shift+c` — you're done!
 
-Layman uses a single TOML file at `~/.config/layman/config.toml`.
+> 💡 See [example_sway_config](example_sway_config) for a complete keybinding setup including modes, focus history, and all layout controls.
 
-```toml
-[layman]
-defaultLayout = "MasterStack"    # Layout for new workspaces
-masterWidth = 50                 # Master window width (%)
-stackLayout = "splitv"           # splitv, splith, tabbed, stacking
-stackSide = "right"              # left or right
-visibleStackLimit = 3            # Collapse extra windows into substack
-
-# Per-workspace overrides
-[workspace.1]
-defaultLayout = "MasterStack"
-masterWidth = 60
-
-[workspace.2]
-defaultLayout = "Autotiling"
-depthLimit = 3
-
-[workspace.3]
-defaultLayout = "Grid"
-```
-
-Reload your config anytime:
-
-```bash
-layman reload
-```
-
-→ **[Full Configuration Reference](docs/configuration/config-reference.md)**
-
-## Commands
-
-| Command | Description |
-|---------|-------------|
-| `layout set <name>` | Set layout: `MasterStack`, `Autotiling`, `Grid`, `none` |
-| `window swap master` | Swap focused window with master |
-| `window move <dir>` | Move window: `up`, `down`, `left`, `right`, `to master` |
-| `window focus master` | Focus the master window |
-| `window rotate cw/ccw` | Rotate layout clockwise/counter-clockwise |
-| `stack toggle` | Cycle: splitv → splith → stacking → tabbed |
-| `stack side toggle` | Toggle stack left ↔ right |
-| `layout maximize` | Toggle fake fullscreen |
-| `reload` | Reload configuration |
-| `status` | Show workspace state |
-| `help` | Show all commands |
-
-### Binding Commands
-
-**`nop` bindings** (recommended) — zero overhead, instant:
-
-```bash
-bindsym $mod+m nop layman layout set MasterStack
-```
-
-**`exec` bindings** — works for scripting:
-
-```bash
-bindsym $mod+m exec layman layout set MasterStack
-```
-
-## Layouts
+## 🎯 Layouts
 
 ### MasterStack
 
-![MasterStack](docs/MasterStack.gif)
-
-Primary window on one side, stack on the other. New windows become master, pushing the old master to the stack.
+Primary window on one side, stack on the other. New windows become master.
 
 ```
 ┌─────────┬──────────┐
-│         │  Stack 1 │
-│  Master ├──────────┤
-│         │  Stack 2 │
+│         │ Stack 1  │
+│ Master  ├──────────┤
+│         │ Stack 2  │
 │         ├──────────┤
-│         │  Stack 3 │
+│         │ Stack 3  │
 └─────────┴──────────┘
 ```
 
 ### Autotiling
 
-Alternates between horizontal and vertical splits based on window dimensions, creating a natural spiral pattern.
+Alternates horizontal/vertical splits based on window dimensions. Natural spiral pattern.
 
 ```
 ┌───┬───────────────────┐
@@ -172,9 +130,7 @@ Alternates between horizontal and vertical splits based on window dimensions, cr
 
 ### Grid
 
-![Grid](docs/Grid.gif)
-
-Distributes windows evenly by always splitting the largest container.
+Splits the largest container, creating balanced even layouts.
 
 ```
 ┌─────────┬─────────┐
@@ -184,15 +140,60 @@ Distributes windows evenly by always splitting the largest container.
 └─────────┴─────────┘
 ```
 
-### Custom Layouts
+### ThreeColumn · TabbedPairs · Custom
 
-Create your own! Place a Python file in `~/.config/layman/` that inherits from `WorkspaceLayoutManager`. It loads automatically on startup and reload.
+Layman ships with 5 layouts and supports **custom layouts** — drop a Python file in `~/.config/layman/` that extends `WorkspaceLayoutManager` and it loads automatically.
 
-→ **[Layout Development Guide](docs/layouts/README.md)**
+→ [Layout documentation](docs/layouts/README.md)
 
-## Running as a Service
+## ⚙️ Configuration
 
-For systemd users, create `~/.config/systemd/user/layman.service`:
+Layman uses a single TOML file at `~/.config/layman/config.toml`.
+
+| Option | Default | Description |
+|--------|---------|-------------|
+| `defaultLayout` | `"none"` | Layout for new workspaces |
+| `masterWidth` | `50` | Master window width (1–99%) |
+| `stackLayout` | `"splitv"` | `splitv`, `splith`, `tabbed`, `stacking` |
+| `stackSide` | `"right"` | `left` or `right` |
+| `visibleStackLimit` | `3` | Max visible stack windows |
+| `depthLimit` | `0` | Autotiling depth limit (0 = unlimited) |
+| `excludedWorkspaces` | `[]` | Workspace numbers to ignore |
+| `debug` | `false` | Enable debug logging |
+
+Override any option per-workspace with `[workspace.N]` sections.
+
+→ [Full config reference](docs/configuration/config-reference.md) · [Examples](docs/configuration/examples.md)
+
+## 📋 Commands
+
+All commands can be bound via `nop` (recommended, zero overhead) or `exec`:
+
+```bash
+bindsym $mod+m nop layman layout set MasterStack    # nop binding (instant)
+bindsym $mod+m exec layman layout set MasterStack   # exec binding (works too)
+```
+
+| Command | Description |
+|---------|-------------|
+| `layout set <name>` | Set layout: `MasterStack`, `Autotiling`, `Grid`, `ThreeColumn`, `TabbedPairs`, `none` |
+| `layout maximize` | Toggle fake fullscreen |
+| `window swap master` | Swap focused window with master |
+| `window focus master` | Focus the master window |
+| `window move <dir>` | Move window: `up`, `down`, `left`, `right` |
+| `window rotate cw/ccw` | Rotate windows clockwise/counter-clockwise |
+| `stack toggle` | Cycle stack layout: splitv → splith → stacking → tabbed |
+| `stack side toggle` | Toggle stack side: left ↔ right |
+| `master add/remove` | Add or remove a master slot |
+| `reload` | Reload configuration |
+| `status` | Show current workspace state |
+
+## 🔧 Running as a Service
+
+<details>
+<summary><strong>Systemd user service (recommended)</strong></summary>
+
+Create `~/.config/systemd/user/layman.service`:
 
 ```ini
 [Unit]
@@ -207,25 +208,26 @@ Restart=on-failure
 WantedBy=graphical-session.target
 ```
 
-Then:
-
 ```bash
 systemctl --user enable --now layman
 ```
 
-## Documentation
+</details>
 
-| Topic | Description |
-|-------|-------------|
+## 📚 Documentation
+
+| | |
+|---|---|
 | **[Configuration Reference](docs/configuration/config-reference.md)** | Every option explained |
 | [Configuration Examples](docs/configuration/examples.md) | Common setups |
-| [Sway Integration](docs/configuration/sway-integration.md) | Full keybinding examples |
+| [Sway Integration](docs/configuration/sway-integration.md) | Full keybinding guide |
 | [Layout Details](docs/layouts/README.md) | In-depth layout docs |
-| [Development Guide](docs/CONTRIBUTING.md) | Contributing, testing, architecture |
+| [Custom Layouts](docs/layouts/custom-layouts.md) | Write your own layouts |
+| **[Development Guide](docs/DEVELOPMENT.md)** | Setup, testing, contributing |
 
 ## Credits
 
-Inspired by [layman](https://github.com/frap129/layman) by Joe Maples (frap129).
+Inspired by [layman](https://github.com/mschulkind/layman) by Joe Maples (frap129).
 
 ## License
 

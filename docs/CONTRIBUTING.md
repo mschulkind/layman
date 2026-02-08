@@ -20,7 +20,7 @@ This guide covers development setup, testing, architecture, and how to contribut
 
 ```bash
 # Clone and setup
-git clone https://github.com/frap129/layman
+git clone https://github.com/mschulkind/layman
 cd layman
 uv sync
 
@@ -44,7 +44,7 @@ just check
 
 ```bash
 curl -LsSf https://astral.sh/uv/install.sh | sh
-git clone https://github.com/frap129/layman
+git clone https://github.com/mschulkind/layman
 cd layman
 uv sync
 ```
@@ -52,7 +52,7 @@ uv sync
 ### Install with pip
 
 ```bash
-git clone https://github.com/frap129/layman
+git clone https://github.com/mschulkind/layman
 cd layman
 pip install -e .
 ```
