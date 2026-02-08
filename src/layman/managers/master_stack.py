@@ -17,7 +17,7 @@ layman. If not, see <https://www.gnu.org/licenses/>.
 """
 
 from enum import Enum
-from typing import TypeVar
+from typing import Any, TypeVar
 
 from i3ipc import Con
 
@@ -293,6 +293,24 @@ class MasterStackLayoutManager(WorkspaceLayoutManager):
         else:
             # Decision #4: Log unknown commands
             self.logError(f"Unknown command: '{command}'")
+
+    def dumpState(self) -> dict[str, Any]:
+        """Dump internal state for debugging."""
+        state = super().dumpState()
+        state.update(
+            {
+                "windowIds": self.windowIds,
+                "stackSide": str(self.stackSide),
+                "stackLayout": str(self.stackLayout),
+                "masterWidth": self.masterWidth,
+                "visibleStackLimit": self.visibleStackLimit,
+                "masterCount": self.masterCount,
+                "maximized": self.maximized,
+                "substackExists": self.substackExists,
+                "lastKnownMasterWidth": self.lastKnownMasterWidth,
+            }
+        )
+        return state
 
     def _swapWithMaster(self, workspace, focused):
         """Swap the focused window with master."""

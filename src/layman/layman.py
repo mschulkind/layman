@@ -18,9 +18,11 @@ layman. If not, see <https://www.gnu.org/licenses/>.
 """
 
 import itertools
+import json
 import logging
 import os
 import shutil
+import yaml
 from collections.abc import Callable
 from contextlib import contextmanager
 from dataclasses import dataclass, field
@@ -402,6 +404,11 @@ class Layman:
             self.fetchUserLayouts()
             self._loadRules()
             self.log("Reloaded layman config")
+            return
+
+        # Handle state dump
+        if command == "dump":
+            self._dumpInternalState()
             return
 
         # Handle session commands (no focused workspace needed)
@@ -788,6 +795,44 @@ class Layman:
             self.sessionManager.delete(name)
         else:
             self.logError(f"Unknown session command: '{subcommand}'")
+
+    def _dumpInternalState(self) -> None:
+        """Dump all internal state to logs for debugging."""
+        state_dump = {
+            "config": self.options.configDict,
+            "workspaces": {},
+        }
+
+        for name, state in self.workspaceStates.items():
+            ws_state = {
+                "layoutName": state.layoutName,
+                "windowIds": list(state.windowIds),
+                "isExcluded": state.isExcluded,
+                "fakeFullscreen": state.fakeFullscreen,
+                "fakeFullscreenWindowId": state.fakeFullscreenWindowId,
+            }
+            if state.layoutManager:
+                try:
+                    ws_state["manager"] = state.layoutManager.dumpState()
+                except Exception as e:
+                    ws_state["manager_error"] = str(e)
+
+            state_dump["workspaces"][name] = ws_state
+
+        if hasattr(self, "ruleEngine"):
+            state_dump["rules"] = [
+                {
+                    "app_id": r.match_app_id,
+                    "class": r.match_window_class,
+                    "floating": r.floating,
+                    "exclude": r.exclude,
+                    "workspace": r.workspace,
+                }
+                for r in self.ruleEngine.rules
+            ]
+
+        yaml_dump = yaml.dump(state_dump, default_flow_style=False, sort_keys=False)
+        self.log(f"Dumping internal state:\n{yaml_dump}")
 
     def _handlePresetCommand(self, subcommand: str) -> None:
         """Handle preset save/load/list/delete commands.
