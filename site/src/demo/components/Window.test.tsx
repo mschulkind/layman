@@ -12,6 +12,7 @@ function resetStore() {
     showHelp: false,
     nextNumber: 1,
     containerRect: { x: 0, y: 0, width: 1000, height: 600 },
+    layoutToast: null,
   });
 }
 

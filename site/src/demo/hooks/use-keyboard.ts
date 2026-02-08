@@ -43,24 +43,25 @@ export function useKeyboard() {
         return;
       }
 
+      // Directional focus: uses layout-aware focusDirection
       if ((key === "l" || key === "ArrowRight") && !shift) {
         e.preventDefault();
-        store.getState().focusNext();
+        store.getState().focusDirection("right");
         return;
       }
       if ((key === "h" || key === "ArrowLeft") && !shift) {
         e.preventDefault();
-        store.getState().focusPrev();
+        store.getState().focusDirection("left");
         return;
       }
       if ((key === "j" || key === "ArrowDown") && !shift) {
         e.preventDefault();
-        store.getState().focusNext();
+        store.getState().focusDirection("down");
         return;
       }
       if ((key === "k" || key === "ArrowUp") && !shift) {
         e.preventDefault();
-        store.getState().focusPrev();
+        store.getState().focusDirection("up");
         return;
       }
 

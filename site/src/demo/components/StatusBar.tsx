@@ -10,7 +10,7 @@ export function StatusBar() {
   return (
     <div
       data-testid="status-bar"
-      className="flex w-full max-w-4xl items-center justify-between rounded-lg border border-border bg-bg-card px-4 py-2 font-mono text-xs"
+      className="flex items-center justify-between rounded-b-lg border-x border-b border-border bg-bg-card px-4 py-1.5 font-mono text-xs"
     >
       <div className="flex items-center gap-4">
         <span className="text-accent-light">{layout}</span>
