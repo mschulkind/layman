@@ -194,26 +194,39 @@ class MasterStackLayoutManager(WorkspaceLayoutManager):
             return
 
         self.lastFocusedWindowId = window.id
-
-        # Track master width proactively so we have it when master is removed
-        if self.windowIds and window.id == self.windowIds[0]:
-            self.lastKnownMasterWidth = window.rect.width
+        self._updateMasterWidth(workspace, window)
 
     def windowMoved(self, event, workspace, window):
-        """Called when a window's position or size changes.
+        """Called when a window's position or size changes in the tree.
 
-        This catches both programmatic resizes (from our commands) and
-        user-initiated resizes (mouse drag). Update master width tracking
-        to learn about user mouse-resizes we wouldn't otherwise know about.
+        Note: Sway/i3 does not emit events for manual mouse resizes of tiling windows.
+        We update our master width tracking whenever any window on this workspace
+        is moved or focused to catch up with any manual changes.
         """
         if self.isFloating(window):
             return
 
-        # Track master width on any size change, not just focus
-        if self.windowIds and window.id == self.windowIds[0]:
+        self._updateMasterWidth(workspace, window)
+
+    def _updateMasterWidth(self, workspace: Con, window: Con | None = None):
+        """Track master width from the current tree state."""
+        if not self.windowIds:
+            return
+
+        # Prefer the provided window if it is the master
+        master = None
+        if window and window.id == self.windowIds[0]:
+            master = window
+        else:
+            master = workspace.find_by_id(self.windowIds[0])
+
+        if master and master.rect.width > 0:
             old_width = self.lastKnownMasterWidth
-            self.lastKnownMasterWidth = window.rect.width
-            self.log(f"Master moved/resized: {old_width}px → {window.rect.width}px")
+            self.lastKnownMasterWidth = master.rect.width
+            if old_width != self.lastKnownMasterWidth:
+                self.log(
+                    f"Master width updated: {old_width}px → {master.rect.width}px"
+                )
 
     def windowFloating(self, event, workspace, window):
         if self.isFloating(window):
