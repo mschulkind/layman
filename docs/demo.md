@@ -1,10 +1,11 @@
-# Interactive Demo
+# Website & Interactive Demo
 
-The Layman interactive demo is a browser-based simulator that lets users
-experience tiling window management without installing anything. It renders
-animated windows inside a virtual monitor and responds to keyboard shortcuts
-mirroring real Layman keybindings.
+The Layman website is an Astro static site that includes a landing page,
+an interactive demo, and a custom 404 page. Astro handles the build pipeline,
+giving us content-hashed filenames for cache busting and a clean deployment
+to Cloudflare Pages.
 
+**Live site:** <https://layman.pages.dev/>  
 **Live demo:** <https://layman.pages.dev/demo/>
 
 ## Running Locally
@@ -20,91 +21,112 @@ This installs npm dependencies and the Playwright Chromium browser.
 ### Dev server (hot reload)
 
 ```bash
-just demo-dev
+just site-dev
 ```
 
-Opens on `http://localhost:5173/demo/`. Changes to source files are reflected
-instantly.
+Opens on `http://localhost:4321/`. The landing page is at `/`, the demo at
+`/demo/`. Changes to source files are reflected instantly.
 
 ### Production preview
 
 ```bash
-just demo-preview
+just site-preview
 ```
 
-Builds the demo and serves it from `http://localhost:4173/demo/` — exactly how
-it will look when deployed.
+Builds the entire site and serves it from `http://localhost:4321/` — exactly
+how it will look when deployed.
 
 ## Deployment
 
-The demo is deployed automatically as part of Cloudflare Pages.
+The site is deployed automatically via Cloudflare Pages.
 
 ### How it works
 
-1. `wrangler.toml` sets `pages_build_output_dir = "site"`, so the entire
-   `site/` directory is deployed.
-2. The Vite config sets `base: "/demo/"` and builds into `site/demo/dist/`.
-3. The `wrangler.toml` build command runs `npm install && npm run build`,
-   then replaces the source files with the build output so that
-   `site/demo/index.html` serves the production bundle at `/demo/`.
+1. Cloudflare runs the build command from `wrangler.toml`:
+   `cd site && npm install && npm run build`
+2. Astro builds the landing page, demo, and 404 page into `site/dist/`.
+3. All JS/CSS assets get content-hashed filenames (e.g.,
+   `_astro/App.Bojvjspf.js`) for aggressive caching.
+4. `wrangler.toml` sets `pages_build_output_dir = "site/dist"`, so
+   Cloudflare serves the Astro build output directly.
+5. Cloudflare Pages automatically serves `404.html` for unknown routes.
 
 ### Build for deployment
 
 ```bash
-just demo-build
+just site-build
 ```
 
-Output lands in `site/demo/dist/`.
+Output lands in `site/dist/`.
 
 ## Project Structure
 
 ```text
-site/demo/
-├── e2e/                    # Playwright E2E tests
-│   └── demo.spec.ts
-├── src/
-│   ├── components/         # React UI components
-│   │   ├── DemoContainer.tsx   # Virtual monitor viewport
-│   │   ├── HelpOverlay.tsx     # Keyboard shortcut reference
-│   │   ├── LayoutSwitcher.tsx  # Layout selection buttons
-│   │   ├── StatusBar.tsx       # Layout name + window count
-│   │   └── Window.tsx          # Individual tiled window
-│   ├── hooks/
-│   │   └── use-keyboard.ts    # Keyboard shortcut handler
-│   ├── layouts/            # Pure layout engine (no React)
-│   │   ├── autotiling.ts
-│   │   ├── grid.ts
-│   │   ├── master-stack.ts
-│   │   ├── three-column.ts
-│   │   ├── types.ts
-│   │   └── index.ts
-│   ├── store/
-│   │   └── window-store.ts    # Zustand state management
-│   ├── test/
-│   │   └── setup.ts
-│   ├── App.tsx
-│   ├── main.tsx
-│   └── index.css
-├── playwright.config.ts
-├── vitest.config.ts
-├── vite.config.ts
+site/
+├── astro.config.mjs         # Astro configuration (React integration, Tailwind)
+├── package.json              # Unified dependencies
 ├── tsconfig.json
-└── package.json
+├── vitest.config.ts          # Unit test configuration
+├── playwright.config.ts      # E2E test configuration
+├── eslint.config.mjs
+├── e2e/                      # Playwright E2E tests
+│   ├── demo.spec.ts          # Demo E2E tests (18 tests)
+│   └── site.spec.ts          # Landing page + 404 E2E tests (9 tests)
+├── src/
+│   ├── pages/
+│   │   ├── index.astro       # Landing page (/)
+│   │   ├── 404.astro         # Custom 404 page
+│   │   └── demo/
+│   │       └── index.astro   # Demo page wrapper (/demo/)
+│   └── demo/                 # React demo source code
+│       ├── App.tsx
+│       ├── main.tsx
+│       ├── index.css
+│       ├── components/       # React UI components
+│       │   ├── DemoContainer.tsx
+│       │   ├── HelpOverlay.tsx
+│       │   ├── LayoutSwitcher.tsx
+│       │   ├── StatusBar.tsx
+│       │   └── Window.tsx
+│       ├── hooks/
+│       │   └── use-keyboard.ts
+│       ├── layouts/           # Pure layout engine (no React)
+│       │   ├── autotiling.ts
+│       │   ├── grid.ts
+│       │   ├── master-stack.ts
+│       │   ├── three-column.ts
+│       │   ├── types.ts
+│       │   └── index.ts
+│       ├── store/
+│       │   └── window-store.ts
+│       └── test/
+│           └── setup.ts
+└── dist/                     # Build output (gitignored)
 ```
+
+### How the demo works with Astro
+
+The demo is a React SPA that runs entirely client-side. The Astro page at
+`src/pages/demo/index.astro` renders the React `<App />` component with the
+`client:only="react"` directive, meaning:
+
+- No server-side rendering — the React app mounts in the browser
+- Astro handles the HTML shell, asset fingerprinting, and build pipeline
+- The React code lives in `src/demo/` and imports are all relative
 
 ### Architecture layers
 
 | Layer | Purpose |
 |-------|---------|
-| **Layouts** (`src/layouts/`) | Pure functions that compute window positions from a list of windows + container rect. Zero React dependencies. |
-| **Store** (`src/store/`) | Zustand store managing windows, focus, layout selection, and all user actions. |
-| **Hooks** (`src/hooks/`) | `useKeyboard` maps keyboard events to store actions. |
-| **Components** (`src/components/`) | React components rendering the virtual desktop. Framer Motion handles layout animations. |
+| **Layouts** (`src/demo/layouts/`) | Pure functions that compute window positions from a list of windows + container rect. Zero React dependencies. |
+| **Store** (`src/demo/store/`) | Zustand store managing windows, focus, layout selection, and all user actions. |
+| **Hooks** (`src/demo/hooks/`) | `useKeyboard` maps keyboard events to store actions. |
+| **Components** (`src/demo/components/`) | React components rendering the virtual desktop. Framer Motion handles layout animations. |
 
 ## Tech Stack
 
-- **Vite** — build tool and dev server
-- **React 19** — UI framework
+- **Astro 5** — static site framework with asset fingerprinting
+- **React 19** — UI framework (demo runs as a `client:only` island)
 - **TypeScript** — type safety
 - **Tailwind CSS v4** — styling (via `@tailwindcss/vite`)
 - **Zustand** — state management
@@ -122,7 +144,7 @@ just demo-test-cov    # Run with coverage report
 ```
 
 Unit tests cover the layout engine, Zustand store, React components, and
-keyboard hook. 98 tests, 96%+ statement coverage.
+keyboard hook. 97 tests across 12 test files.
 
 ### E2E browser tests (Playwright)
 
@@ -131,9 +153,10 @@ just demo-test-e2e          # Headless (CI-friendly)
 just demo-test-e2e-headed   # Visible browser (debugging)
 ```
 
-Playwright tests build the production bundle, start a preview server, and
+Playwright tests build the full Astro site, start a preview server, and
 drive a real Chromium browser. They verify:
 
+**Demo tests** (18 tests):
 - Page loads with correct initial state
 - Keyboard shortcuts spawn/close/focus windows
 - Layout switcher buttons work
@@ -141,17 +164,25 @@ drive a real Chromium browser. They verify:
 - Focus navigation cycles through windows
 - Full spawn → switch → navigate → close workflow
 
-18 E2E tests covering all user-facing functionality.
+**Landing page tests** (6 tests):
+- Hero section renders correctly
+- Features section displays
+- Layout showcase tabs work
+- Demo link is present
+
+**404 page tests** (3 tests):
+- Shows 404 for unknown routes
+- Links back to home and demo
 
 ### Run everything
 
 ```bash
-just demo-check   # Lint + unit tests + E2E tests
+just site-check   # Lint + unit tests + E2E tests
 ```
 
 This is also included in the top-level `just check`.
 
-## Keyboard Shortcuts
+## Keyboard Shortcuts (Demo)
 
 | Key | Action |
 |-----|--------|
@@ -182,13 +213,13 @@ This is also included in the top-level `just check`.
 | Command | Description |
 |---------|-------------|
 | `just setup-demo` | Install dependencies + Playwright browser |
-| `just demo-dev` | Start Vite dev server with hot reload |
-| `just demo-build` | Production build to `site/demo/dist/` |
-| `just demo-preview` | Build + preview production bundle |
+| `just site-dev` | Start Astro dev server with hot reload |
+| `just site-build` | Production build to `site/dist/` |
+| `just site-preview` | Build + preview production bundle |
 | `just demo-test` | Run Vitest unit tests |
 | `just demo-test-cov` | Unit tests with coverage report |
 | `just demo-test-e2e` | Run Playwright E2E tests (headless) |
 | `just demo-test-e2e-headed` | E2E tests with visible browser |
 | `just demo-test-all` | Unit tests + E2E tests |
-| `just demo-lint` | ESLint check |
-| `just demo-check` | Lint + unit + E2E (full CI check) |
+| `just site-lint` | ESLint check |
+| `just site-check` | Lint + unit + E2E (full CI check) |
