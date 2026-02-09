@@ -16,10 +16,13 @@ You should have received a copy of the GNU General Public License along with
 layman. If not, see <https://www.gnu.org/licenses/>.
 """
 
-from os import mkfifo, unlink
+import logging
+import os
+import socket
 from queue import SimpleQueue
 from threading import Thread
 
+logger = logging.getLogger(__name__)
 DEFAULT_PIPE_PATH = "/tmp/layman.pipe"
 
 
@@ -29,18 +32,47 @@ class MessageServer:
         self.pipe_path = pipe_path or DEFAULT_PIPE_PATH
 
         try:
-            unlink(self.pipe_path)
+            os.unlink(self.pipe_path)
         except FileNotFoundError:
             pass
 
-        mkfifo(self.pipe_path)
-        thread = Thread(target=self.readPipe, daemon=True)
+        # We keep the .pipe extension for compatibility but use a Unix Domain Socket
+        self.sock = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+        self.sock.bind(self.pipe_path)
+        os.chmod(self.pipe_path, 0o600)
+        self.sock.listen(5)
+
+        thread = Thread(target=self.run, daemon=True)
         thread.start()
 
-    def readPipe(self):
+    def run(self):
         while True:
-            with open(self.pipe_path) as fifo:
-                command = fifo.read().strip()
-                # Decision #6: Filter empty commands
-                if command:
-                    self.queue.put({"type": "command", "command": command})
+            try:
+                conn, _ = self.sock.accept()
+                with conn:
+                    data = conn.recv(4096)
+                    if not data:
+                        continue
+                    command = data.decode("utf-8").strip()
+                    if command:
+                        # We use a response queue to get the result back from the main thread
+                        response_queue = SimpleQueue()
+                        self.queue.put(
+                            {
+                                "type": "command",
+                                "command": command,
+                                "response_queue": response_queue,
+                            }
+                        )
+                        # Wait for response with a timeout
+                        try:
+                            response = response_queue.get(timeout=10)
+                            conn.sendall(response.encode("utf-8"))
+                        except Exception:
+                            conn.sendall(b"Error: Command timed out or failed.")
+            except Exception as e:
+                logger.error(f"Error in MessageServer: {e}")
+
+    def readPipe(self):
+        # Deprecated: kept for reference or until fully replaced
+        pass
