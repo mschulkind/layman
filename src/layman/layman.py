@@ -18,11 +18,9 @@ layman. If not, see <https://www.gnu.org/licenses/>.
 """
 
 import itertools
-import json
 import logging
 import os
 import shutil
-import yaml
 from collections.abc import Callable
 from contextlib import contextmanager
 from dataclasses import dataclass, field
@@ -30,6 +28,7 @@ from importlib.machinery import SourceFileLoader
 from queue import SimpleQueue
 from typing import Any, cast
 
+import yaml
 from i3ipc import BindingEvent, Con, Connection, WindowEvent, WorkspaceEvent
 from setproctitle import setproctitle
 
@@ -386,15 +385,19 @@ class Layman:
                 else:
                     self.command(command)
 
-    def onCommand(self, command):
-        for command in command.split(";"):
-            command = command.strip()
+    def onCommand(self, command) -> str:
+        results = []
+        for cmd in command.split(";"):
+            cmd = cmd.strip()
             # Decision #6: Filter empty commands
-            if not command:
+            if not cmd:
                 continue
-            self.handleCommand(command)
+            res = self.handleCommand(cmd)
+            if res:
+                results.append(res)
+        return "\n".join(results) or "OK"
 
-    def handleCommand(self, command: str):
+    def handleCommand(self, command: str) -> str | None:
         assert ";" not in command
 
         # Handle reload (no workspace needed)
@@ -404,25 +407,23 @@ class Layman:
             self.fetchUserLayouts()
             self._loadRules()
             self.log("Reloaded layman config")
-            return
+            return "Reloaded config"
 
         # Handle state dump
         if command == "dump":
-            self._dumpInternalState()
-            return
+            return self._dumpInternalState()
 
         # Handle session commands (no focused workspace needed)
         if command.startswith("session "):
-            self._handleSessionCommand(command[len("session ") :])
-            return
+            return self._handleSessionCommand(command[len("session ") :])
+
         # Handle preset commands (no focused workspace needed)
         if command.startswith("preset "):
-            self._handlePresetCommand(command[len("preset ") :])
-            return
+            return self._handlePresetCommand(command[len("preset ") :])
         workspace = utils.findFocusedWorkspace(self.conn)
         if not workspace or self.workspaceStates[workspace.name].isExcluded:
             self.command(command)
-            return
+            return f"Passed to sway: {command}"
 
         state = self.workspaceStates[workspace.name]
 
@@ -432,11 +433,14 @@ class Layman:
             if rest.startswith("set "):
                 shortName = rest[len("set ") :]
                 self.setWorkspaceLayout(workspace, workspace.name, shortName)
+                return f"Layout set to {shortName}"
             elif rest == "maximize":
                 self.toggleFakeFullscreen(workspace, state)
+                return "Maximize toggled"
             else:
-                self.logError(f"Unknown layout command: '{command}'")
-            return
+                msg = f"Unknown layout command: '{command}'"
+                self.logError(msg)
+                return msg
 
         # Route "window <subcommand>" → strip prefix, pass to manager
         if command.startswith("window "):
@@ -447,9 +451,10 @@ class Layman:
                 if prev_id:
                     self.command(f"[con_id={prev_id}] focus")
                     self.log(f"Focus previous: window {prev_id}")
+                    return f"Focus previous: window {prev_id}"
                 else:
                     self.log("No previous window in focus history")
-                return
+                    return "No previous focus history"
             # Check move/focus overrides
             if (
                 manager_command.startswith("move")
@@ -475,9 +480,12 @@ class Layman:
                 self.log("Calling manager for workspace %s" % workspace.name)
                 with layoutManagerReloader(self, workspace):
                     state.layoutManager.onCommand(manager_command, workspace)
+                return (
+                    f"Processed by {state.layoutManager.shortName}: {manager_command}"
+                )
             else:
                 self.log("No manager for workspace %s, ignoring" % workspace.name)
-            return
+                return f"No manager for workspace {workspace.name}"
 
         # Route "stack <subcommand>" → pass to manager
         if command.startswith("stack "):
@@ -486,9 +494,12 @@ class Layman:
                 self.log("Calling manager for workspace %s" % workspace.name)
                 with layoutManagerReloader(self, workspace):
                     state.layoutManager.onCommand(manager_command, workspace)
+                return (
+                    f"Processed by {state.layoutManager.shortName}: {manager_command}"
+                )
             else:
                 self.log("No manager for workspace %s, ignoring" % workspace.name)
-            return
+                return f"No manager for workspace {workspace.name}"
 
         # Route "master <subcommand>" → pass to manager
         if command.startswith("master "):
@@ -497,9 +508,12 @@ class Layman:
                 self.log("Calling manager for workspace %s" % workspace.name)
                 with layoutManagerReloader(self, workspace):
                     state.layoutManager.onCommand(manager_command, workspace)
+                return (
+                    f"Processed by {state.layoutManager.shortName}: {manager_command}"
+                )
             else:
                 self.log("No manager for workspace %s, ignoring" % workspace.name)
-            return
+                return f"No manager for workspace {workspace.name}"
 
         # Backwards compatibility: pass bare move/focus commands to Sway
         # if the layout manager doesn't override them
@@ -771,7 +785,7 @@ class Layman:
     def logCaller(self, msg):
         logger.debug(msg, stacklevel=3)
 
-    def _handleSessionCommand(self, subcommand: str) -> None:
+    def _handleSessionCommand(self, subcommand: str) -> str:
         """Handle session save/restore/list/delete commands."""
         if not hasattr(self, "sessionManager"):
             session_dir = os.path.join(
@@ -785,18 +799,27 @@ class Layman:
 
         if action == "save":
             path = self.sessionManager.save(name, self.workspaceStates)
-            self.log(f"Session saved to {path}")
+            msg = f"Session saved to {path}"
+            self.log(msg)
+            return msg
         elif action == "restore":
             self.sessionManager.restore(name)
+            return f"Session {name} restored"
         elif action == "list":
             sessions = self.sessionManager.list_sessions()
-            self.log(f"Sessions: {', '.join(sessions) if sessions else '(none)'}")
+            msg = f"Sessions: {', '.join(sessions) if sessions else '(none)'}"
+            self.log(msg)
+            return msg
         elif action == "delete":
             self.sessionManager.delete(name)
+            return f"Session {name} deleted"
         else:
+            msg = f"Unknown session command: '{subcommand}'"
+            self.logError(msg)
+            return msg
             self.logError(f"Unknown session command: '{subcommand}'")
 
-    def _dumpInternalState(self) -> None:
+    def _dumpInternalState(self) -> str:
         """Dump all internal state to logs for debugging."""
         state_dump = {
             "config": self.options.configDict,
@@ -833,8 +856,9 @@ class Layman:
 
         yaml_dump = yaml.dump(state_dump, default_flow_style=False, sort_keys=False)
         self.log(f"Dumping internal state:\n{yaml_dump}")
+        return yaml_dump
 
-    def _handlePresetCommand(self, subcommand: str) -> None:
+    def _handlePresetCommand(self, subcommand: str) -> str:
         """Handle preset save/load/list/delete commands.
 
         Presets save the current workspace's layout name and options so you
@@ -855,9 +879,13 @@ class Layman:
             if workspace and workspace.name in self.workspaceStates:
                 state = self.workspaceStates[workspace.name]
                 self.presetManager.save(name, state.layoutName)
-                self.log(f"Preset saved: {name}")
+                msg = f"Preset saved: {name}"
+                self.log(msg)
+                return msg
             else:
-                self.logError("No focused workspace for preset save")
+                msg = "No focused workspace for preset save"
+                self.logError(msg)
+                return msg
         elif action == "load" and name:
             preset = self.presetManager.load(name)
             if preset:
@@ -866,18 +894,29 @@ class Layman:
                     self.setWorkspaceLayout(
                         workspace, workspace.name, preset.layout_name
                     )
-                    self.log(f"Preset loaded: {name} ({preset.layout_name})")
+                    msg = f"Preset loaded: {name} ({preset.layout_name})"
+                    self.log(msg)
+                    return msg
                 else:
-                    self.logError("No focused workspace for preset load")
+                    msg = "No focused workspace for preset load"
+                    self.logError(msg)
+                    return msg
             else:
-                self.logError(f"Preset not found: {name}")
+                msg = f"Preset not found: {name}"
+                self.logError(msg)
+                return msg
         elif action == "list":
             presets = self.presetManager.list_presets()
-            self.log(f"Presets: {', '.join(presets) if presets else '(none)'}")
+            msg = f"Presets: {', '.join(presets) if presets else '(none)'}"
+            self.log(msg)
+            return msg
         elif action == "delete" and name:
             self.presetManager.delete(name)
+            return f"Preset {name} deleted"
         else:
-            self.logError(f"Unknown preset command: '{subcommand}'")
+            msg = f"Unknown preset command: '{subcommand}'"
+            self.logError(msg)
+            return msg
 
     def logError(self, msg):
         logger.error(msg, stacklevel=2)
@@ -993,12 +1032,18 @@ class Layman:
 
             elif notification["type"] == "command":
                 try:
-                    self.onCommand(notification["command"])
+                    result = self.onCommand(notification["command"])
+                    if "response_queue" in notification:
+                        notification["response_queue"].put(result)
                 except Exception:
                     logger.error(
                         "Error handling command: %s",
                         notification["command"],
                         exc_info=True,
                     )
+                    if "response_queue" in notification:
+                        notification["response_queue"].put(
+                            "Error: Command execution failed."
+                        )
             else:
                 raise RuntimeError(f"Notification with invalid type: {notification}")

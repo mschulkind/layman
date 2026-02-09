@@ -18,6 +18,7 @@ layman. If not, see <https://www.gnu.org/licenses/>.
 
 import os
 import shutil
+import socket
 import subprocess
 import sys
 from pathlib import Path
@@ -83,18 +84,35 @@ def get_pipe_path() -> str:
 
 
 def send_command(command: str, pipe_path: str) -> bool:
-    """Send a command to the daemon via named pipe."""
+    """Send a command to the daemon via Unix Domain Socket."""
     try:
-        with open(pipe_path, "w") as pipe:
-            pipe.write(command)
+        with socket.socket(socket.AF_UNIX, socket.SOCK_STREAM) as sock:
+            sock.settimeout(10)
+            sock.connect(pipe_path)
+            sock.sendall(command.encode("utf-8"))
+
+            # Read response
+            response = b""
+            while True:
+                chunk = sock.recv(4096)
+                if not chunk:
+                    break
+                response += chunk
+
+            if response:
+                print(response.decode("utf-8"))
         return True
-    except FileNotFoundError:
-        # Decision #18: Better error message
+    except ConnectionRefusedError:
         print("Error: Layman daemon is not running.", file=sys.stderr)
-        print("Start the daemon with: layman", file=sys.stderr)
         return False
-    except PermissionError:
-        print(f"Error: Permission denied accessing {pipe_path}", file=sys.stderr)
+    except FileNotFoundError:
+        print("Error: Layman daemon is not running (pipe not found).", file=sys.stderr)
+        return False
+    except TimeoutError:
+        print("Error: Command timed out.", file=sys.stderr)
+        return False
+    except Exception as e:
+        print(f"Error communicating with daemon: {e}", file=sys.stderr)
         return False
 
 
