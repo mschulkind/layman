@@ -225,6 +225,16 @@ class MasterStackLayoutManager(WorkspaceLayoutManager):
             self.lastKnownMasterWidth = master.rect.width
             if old_width != self.lastKnownMasterWidth:
                 self.log(f"Master width updated: {old_width}px → {master.rect.width}px")
+                if (
+                    old_width > 0
+                    and master.rect.width < old_width * 0.5
+                    and len(self.windowIds) > 2
+                ):
+                    self.logError(
+                        f"Master width dropped >50% ({old_width}px → {master.rect.width}px) "
+                        f"with {len(self.windowIds)} windows tracked. "
+                        f"Window IDs: {self.windowIds}"
+                    )
 
     def windowFloating(self, event, workspace, window):
         if self.isFloating(window):
@@ -490,21 +500,34 @@ class MasterStackLayoutManager(WorkspaceLayoutManager):
         elif len(self.windowIds) == 1:
             # We have 2 windows now, so we create the master and the stack.
 
-            if positionAtIndex == 0:
-                masterId = window.id
-                firstStackId = self.windowIds[0]
+            # Validate that the existing tracked window still exists in the tree.
+            # A stale/ghost window here (e.g. from a workspace that was destroyed
+            # before cleanup could run) would cause all subsequent layout commands
+            # to fail silently.
+            existingId = self.windowIds[0]
+            if not workspace.find_by_id(existingId):
+                self.logError(
+                    f"Stale window {existingId} in windowIds (not found in tree). "
+                    f"Removing ghost and treating {window.id} as first window."
+                )
+                self.windowIds.clear()
+                # Fall through to insert-only path below (len is now 0)
             else:
-                masterId = self.windowIds[0]
-                firstStackId = window.id
+                if positionAtIndex == 0:
+                    masterId = window.id
+                    firstStackId = self.windowIds[0]
+                else:
+                    masterId = self.windowIds[0]
+                    firstStackId = window.id
 
-            if self.stackSide == Side.LEFT:
-                self.command(f"[con_id={firstStackId}] splith")
-                self.moveWindowCommand(masterId, firstStackId)
-            else:
-                self.command(f"[con_id={masterId}] splith")
-                self.moveWindowCommand(firstStackId, masterId)
+                if self.stackSide == Side.LEFT:
+                    self.command(f"[con_id={firstStackId}] splith")
+                    self.moveWindowCommand(masterId, firstStackId)
+                else:
+                    self.command(f"[con_id={masterId}] splith")
+                    self.moveWindowCommand(firstStackId, masterId)
 
-            self.command(f"[con_id={firstStackId}] splitv")
+                self.command(f"[con_id={firstStackId}] splitv")
         else:
             if positionAtIndex == 0:  # New master
                 self.swapWindowsCommand(window.id, self.windowIds[0])

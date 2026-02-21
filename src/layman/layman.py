@@ -762,7 +762,7 @@ class Layman:
             self.log(
                 f"Calling windowRemoved for window id {event.container.id} on workspace {workspaceName}"
             )
-            with layoutManagerReloader(self, workspace):
+            with layoutManagerReloader(self, workspace, workspaceName):
                 state.layoutManager.windowRemoved(event, workspace, event.container)
         else:
             if workspace:
