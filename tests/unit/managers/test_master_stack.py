@@ -487,7 +487,8 @@ class TestPushWindow:
         self, basic_manager, mock_connection
     ):
         """Second window should create master-stack structure."""
-        workspace = MockCon(name="1", type="workspace")
+        existing_window = MockCon(id=100)
+        workspace = MockCon(name="1", type="workspace", nodes=[existing_window])
         basic_manager.windowIds = [100]
 
         window = MockCon(id=200)
@@ -499,6 +500,23 @@ class TestPushWindow:
         assert basic_manager.windowIds[1] == 100  # Original is stack
         # Should have executed layout commands
         assert len(mock_connection.commands_executed) > 0
+
+    def test_pushWindow_secondWindow_ghostDetection(
+        self, basic_manager, mock_connection
+    ):
+        """Ghost/stale window ID should be cleaned up, not used for layout commands."""
+        # Workspace has NO children — window 100 is a ghost (was closed but not removed
+        # from windowIds, e.g. because the workspace was destroyed first).
+        workspace = MockCon(name="1", type="workspace")
+        basic_manager.windowIds = [100]
+
+        window = MockCon(id=200)
+        basic_manager.pushWindow(workspace, window)
+
+        # Ghost should be removed, only the new real window remains
+        assert basic_manager.windowIds == [200]
+        # No layout commands should be issued (only 1 real window)
+        assert len(mock_connection.commands_executed) == 0
 
     def test_pushWindow_thirdWindow_becomesNewMaster(
         self, basic_manager, mock_connection
