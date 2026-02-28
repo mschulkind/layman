@@ -501,6 +501,51 @@ class TestPushWindow:
         # Should have executed layout commands
         assert len(mock_connection.commands_executed) > 0
 
+    def test_pushWindow_secondWindow_masterWidthAfterRemoveExtraNesting(
+        self, mock_connection, temp_config
+    ):
+        """Regression: setMasterWidth must be called AFTER removeExtraNesting.
+
+        On a fresh boot, the 1→2 window transition in pushWindow creates an
+        intermediate container (via splith). removeExtraNesting flattens it with
+        ``split none``, which resets proportions to 50/50. If setMasterWidth ran
+        before removeExtraNesting, the configured width was overwritten.
+        """
+        config = temp_config(
+            '[layman]\ndefaultLayout = "MasterStack"\nmasterWidth = 66\n'
+        )
+        workspace = MockCon(name="7", type="workspace")
+        manager = MasterStackLayoutManager(
+            mock_connection, workspace, "7", config
+        )
+        assert manager.masterWidth == 66
+
+        # First window
+        existing_window = MockCon(id=100)
+        workspace = MockCon(name="7", type="workspace", nodes=[existing_window])
+        manager.windowIds = [100]
+
+        mock_connection.clear_commands()
+        window = MockCon(id=200)
+        manager.pushWindow(workspace, window)
+
+        # The resize command must come AFTER any "split none" command
+        cmds = mock_connection.commands_executed
+        resize_indices = [
+            i for i, c in enumerate(cmds) if "resize set width 66 ppt" in c
+        ]
+        split_none_indices = [
+            i for i, c in enumerate(cmds) if "split none" in c
+        ]
+        assert resize_indices, (
+            f"setMasterWidth was not called; commands were: {cmds}"
+        )
+        if split_none_indices:
+            assert max(split_none_indices) < min(resize_indices), (
+                "setMasterWidth must be called AFTER removeExtraNesting; "
+                f"commands were: {cmds}"
+            )
+
     def test_pushWindow_secondWindow_ghostDetection(
         self, basic_manager, mock_connection
     ):
