@@ -555,10 +555,11 @@ class MasterStackLayoutManager(WorkspaceLayoutManager):
         self.createSubstackIfNeeded()
         if len(self.windowIds) == 2:
             # If we now have two window IDs, then we just created the master and stack and need to
-            # adjust them.
+            # adjust them. removeExtraNesting must come before setMasterWidth because
+            # `split none` on the intermediate container resets proportions to 50/50.
             self.setStackLayout()
-            self.setMasterWidth()
             self.removeExtraNesting(workspace)
+            self.setMasterWidth()
         elif positionAtIndex == 0 and len(self.windowIds) > 2:
             # A new master was swapped in. The swap/move operations can disrupt the
             # master width ratio, so re-apply it.
