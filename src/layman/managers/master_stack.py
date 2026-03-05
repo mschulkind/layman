@@ -115,6 +115,7 @@ class MasterStackLayoutManager(WorkspaceLayoutManager):
         self.maximized = False
         self.masterWidthBeforeMaximize = 0
         self.lastKnownMasterWidth = 0
+        self._extraNestingPending = False
 
         # Decision #10: Accept int or float, reject 0 and 100
         self.masterWidth = 50
@@ -192,6 +193,17 @@ class MasterStackLayoutManager(WorkspaceLayoutManager):
     def windowFocused(self, event, workspace, window):
         if self.isFloating(window):
             return
+
+        # Retry removing extra nesting if a previous attempt failed (e.g., during
+        # rapid window creation). By the time focus events arrive, all windows
+        # should be in the layout and split none can succeed.
+        if (
+            self._extraNestingPending
+            and len(self.windowIds) >= 2
+            and self.removeExtraNesting(workspace)
+        ):
+            self._extraNestingPending = False
+            self.setMasterWidth()
 
         self.lastFocusedWindowId = window.id
         self._updateMasterWidth(workspace, window)
@@ -420,18 +432,33 @@ class MasterStackLayoutManager(WorkspaceLayoutManager):
             f"[con_id={firstWindowId}] swap container with con_id {secondWindowId}"
         )
 
-    def removeExtraNesting(self, workspace: Con):
+    def removeExtraNesting(self, workspace: Con) -> bool:
+        """Remove intermediate container wrapping the master.
+
+        Returns True if no extra nesting exists or it was successfully removed.
+        Returns False if removal failed (e.g., container has siblings from
+        rapid window creation).
+        """
         # We need to refresh our view of the tree here because master's parent may not have even
         # existed when we started handling this init/event, it is created as we arrange the first
         # stack window.
         master = self.con.get_tree().find_by_id(self.windowIds[0])
         if not master:
             self.log("Something probably went wrong in arrangeWindows")
-            return
+            return False
         masterParent = master.parent
         assert masterParent
         if masterParent.id != workspace.id:
-            self.command(f"[con_id={masterParent.id}] split none")
+            cmd = f"[con_id={masterParent.id}] split none"
+            self.logger.debug("Running command: %s", cmd, stacklevel=2)
+            results = self.con.command(cmd)
+            for result in results:
+                if result.success:
+                    self.logger.debug("Command succeeded.", stacklevel=2)
+                else:
+                    self.logger.error("Command failed: %s", result.error, stacklevel=2)
+                    return False
+        return True
 
     def arrangeWindows(self, workspace: Con):
         windows = workspace.leaves()
@@ -459,7 +486,10 @@ class MasterStackLayoutManager(WorkspaceLayoutManager):
                 f"Window count mismatch: arranged {len(self.windowIds)} but workspace has {actual_leaves} leaves"
             )
 
-        self.removeExtraNesting(workspace)
+        if self.removeExtraNesting(workspace):
+            self._extraNestingPending = False
+        else:
+            self._extraNestingPending = True
 
         # Ensure configured master width is applied after all rearrangement
         if len(self.windowIds) >= 2:
@@ -553,16 +583,33 @@ class MasterStackLayoutManager(WorkspaceLayoutManager):
         self.windowIds.insert(positionAtIndex, window.id)
         self.log(f"window ids: {self.windowIds}")
         self.createSubstackIfNeeded()
+        needsMasterWidth = False
         if len(self.windowIds) == 2:
             # If we now have two window IDs, then we just created the master and stack and need to
             # adjust them. removeExtraNesting must come before setMasterWidth because
             # `split none` on the intermediate container resets proportions to 50/50.
             self.setStackLayout()
-            self.removeExtraNesting(workspace)
-            self.setMasterWidth()
+            if not self.removeExtraNesting(workspace):
+                self._extraNestingPending = True
+            needsMasterWidth = True
         elif positionAtIndex == 0 and len(self.windowIds) > 2:
             # A new master was swapped in. The swap/move operations can disrupt the
             # master width ratio, so re-apply it.
+            needsMasterWidth = True
+
+        # Retry removing extra nesting from a previous failed attempt.
+        # During rapid window creation (e.g., browser restart), split none fails
+        # because unprocessed windows are siblings of the intermediate container.
+        # As each new window is moved into the layout, siblings decrease.
+        if (
+            self._extraNestingPending
+            and len(self.windowIds) > 2
+            and self.removeExtraNesting(workspace)
+        ):
+            self._extraNestingPending = False
+            needsMasterWidth = True
+
+        if needsMasterWidth:
             self.setMasterWidth()
 
     def popWindow(self, window: Con):
