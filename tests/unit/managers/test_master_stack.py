@@ -24,6 +24,7 @@ from layman.managers.master_stack import (
     KEY_VISIBLE_STACK_LIMIT,
 )
 from tests.mocks.i3ipc_mocks import (
+    MockCommandReply,
     MockConnection,
     MockCon,
     MockRect,
@@ -637,6 +638,132 @@ class TestPushWindow:
                 f"setMasterWidth not called after adding window {300 + i}; "
                 f"commands were: {mock_connection.commands_executed}"
             )
+
+
+    def test_pushWindow_rapidCreation_retriesRemoveExtraNesting(
+        self, mock_connection, temp_config
+    ):
+        """Regression: rapid window creation (e.g., Chrome restart) causes
+        removeExtraNesting to fail because split none can't flatten a container
+        with siblings (unprocessed windows). The retry mechanism should
+        re-attempt on subsequent pushWindow calls and re-apply master width."""
+        config = temp_config(
+            '[layman]\ndefaultLayout = "MasterStack"\nmasterWidth = 75\n'
+        )
+        # Workspace must contain the existing window so ghost check passes
+        existing_window = MockCon(id=100, rect=MockRect(width=640))
+        workspace = MockCon(id=7, name="7", type="workspace", nodes=[existing_window])
+        manager = MasterStackLayoutManager(
+            mock_connection, workspace, "7", config
+        )
+        assert manager.masterWidth == 75
+        manager.windowIds = [100]
+
+        # Set up tree so removeExtraNesting finds master in a nested container
+        # with a sibling (simulating unprocessed windows from rapid creation).
+        master_win = MockCon(id=200, rect=MockRect(width=1920))
+        stack_win = MockCon(id=100, rect=MockRect(width=640))
+        nested_container = MockCon(id=999, type="con", nodes=[master_win, stack_win])
+        sibling_win = MockCon(id=300, rect=MockRect(width=640))
+        tree_workspace = MockCon(
+            id=7, name="7", type="workspace",
+            nodes=[nested_container, sibling_win],
+        )
+        mock_connection.tree = MockCon(
+            type="root", nodes=[MockCon(type="output", nodes=[tree_workspace])]
+        )
+
+        # Make split none fail (simulating siblings preventing flatten)
+        def fail_split_none(cmd):
+            if "split none" in cmd:
+                return [MockCommandReply(
+                    success=False,
+                    error="Can only flatten a child container with no siblings",
+                )]
+            return None  # default handling for other commands
+
+        mock_connection._command_callback = fail_split_none
+
+        # Push second window — triggers removeExtraNesting which fails
+        window = MockCon(id=200)
+        manager.pushWindow(workspace, window)
+
+        assert manager._extraNestingPending is True
+
+        # Now simulate the sibling being moved into the layout (tree changes).
+        tree_workspace_clean = MockCon(
+            id=7, name="7", type="workspace",
+            nodes=[MockCon(id=999, type="con", nodes=[
+                MockCon(id=200, rect=MockRect(width=1920)),
+                MockCon(id=100),
+                MockCon(id=300),
+            ])],
+        )
+        mock_connection.tree = MockCon(
+            type="root",
+            nodes=[MockCon(type="output", nodes=[tree_workspace_clean])],
+        )
+
+        # Allow split none to succeed now
+        mock_connection._command_callback = None
+        mock_connection.clear_commands()
+
+        # Push third window — should retry removeExtraNesting
+        window3 = MockCon(id=300)
+        manager.pushWindow(workspace, window3)
+
+        assert manager._extraNestingPending is False
+
+        # setMasterWidth should have been called after successful retry
+        resize_cmds = [
+            c for c in mock_connection.commands_executed
+            if "resize set width 75 ppt" in c
+        ]
+        assert len(resize_cmds) >= 1, (
+            "setMasterWidth must be called after removeExtraNesting retry succeeds; "
+            f"commands were: {mock_connection.commands_executed}"
+        )
+
+    def test_windowFocused_retriesRemoveExtraNesting(
+        self, mock_connection, temp_config
+    ):
+        """Safety net: windowFocused should retry removeExtraNesting if it
+        was left pending from rapid window creation."""
+        config = temp_config(
+            '[layman]\ndefaultLayout = "MasterStack"\nmasterWidth = 75\n'
+        )
+        workspace = MockCon(name="7", type="workspace")
+        manager = MasterStackLayoutManager(
+            mock_connection, workspace, "7", config
+        )
+        manager.windowIds = [200, 100]
+        manager._extraNestingPending = True
+
+        # Set up tree so removeExtraNesting finds master in nested container
+        master_win = MockCon(id=200, rect=MockRect(width=1920))
+        stack_win = MockCon(id=100, rect=MockRect(width=640))
+        nested_container = MockCon(id=999, type="con", nodes=[master_win, stack_win])
+        tree_workspace = MockCon(
+            id=7, name="7", type="workspace", nodes=[nested_container],
+        )
+        mock_connection.tree = MockCon(
+            type="root", nodes=[MockCon(type="output", nodes=[tree_workspace])],
+        )
+        mock_connection.clear_commands()
+
+        # Focus event triggers retry
+        event = MockWindowEvent(change="focus", container=master_win)
+        manager.windowFocused(event, workspace, master_win)
+
+        assert manager._extraNestingPending is False
+        resize_cmds = [
+            c for c in mock_connection.commands_executed
+            if "resize set width 75 ppt" in c
+        ]
+        assert len(resize_cmds) >= 1, (
+            "setMasterWidth must be called after windowFocused retry; "
+            f"commands were: {mock_connection.commands_executed}"
+        )
 
 
 class TestArrangeWindows:

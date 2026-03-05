@@ -147,10 +147,16 @@ class MockConnection:
         self.tree = tree or MockCon(type="root")
         self.commands_executed: list[str] = []
         self._command_results: list[MockCommandReply] = []
+        self._command_callback = None  # Optional per-command callback: (cmd) -> results
 
     def command(self, cmd: str) -> list[MockCommandReply]:
         """Execute a command and record it."""
         self.commands_executed.append(cmd)
+
+        if self._command_callback:
+            result = self._command_callback(cmd)
+            if result is not None:
+                return result
 
         if self._command_results:
             return self._command_results
