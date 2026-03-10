@@ -42,6 +42,7 @@ class ListenerThread:
             Event.WINDOW_MOVE,
             Event.WINDOW_FLOATING,
             Event.WORKSPACE_INIT,
+            Event.OUTPUT,
         ]:
             self.connection.on(event, self.handleEvent)
 
