@@ -169,7 +169,81 @@ class TestBuiltinLayouts:
         assert "Grid" in layouts
 
 
-class TestSwayLayoutNames:
+class TestOnOutputChange:
+    """Tests for onOutputChange() — re-applying master widths after monitor change."""
+
+    @pytest.fixture
+    def layman_with_workspaces(self, configs_path):
+        """Create a Layman instance with mocked workspace states."""
+        config_file = str(configs_path / "minimal_config.toml")
+        with patch("layman.layman.utils.getConfigPath", return_value=config_file):
+            layman = Layman()
+
+        # Create mock MasterStack managers for two workspaces
+        mgr7 = Mock()
+        mgr7.windowIds = [52, 34, 37, 36, 35, 30, 33, 31]
+        # Ensure isinstance check passes
+        from layman.managers.master_stack import MasterStackLayoutManager
+        mgr7.__class__ = MasterStackLayoutManager
+
+        mgr4 = Mock()
+        mgr4.windowIds = [97]
+        mgr4.__class__ = MasterStackLayoutManager
+
+        layman.workspaceStates = {
+            "7": WorkspaceState(layoutManager=mgr7, windowIds={52, 34, 37, 36, 35, 30, 33, 31}),
+            "4": WorkspaceState(layoutManager=mgr4, windowIds={97}),
+            "8": WorkspaceState(layoutManager=None, windowIds={10, 48}),
+        }
+        return layman, mgr7, mgr4
+
+    def test_onOutputChange_reappliesMasterWidth(self, layman_with_workspaces):
+        """Output change should re-apply master width on workspaces with >= 2 windows."""
+        layman, mgr7, mgr4 = layman_with_workspaces
+
+        tree = MockCon(
+            type="root",
+            nodes=[MockCon(type="output", nodes=[
+                create_workspace(name="7", window_count=8),
+                create_workspace(name="4", window_count=1),
+            ])],
+        )
+
+        layman.onOutputChange(tree)
+
+        mgr7.setMasterWidth.assert_called_once()
+
+    def test_onOutputChange_skipsWorkspaceWithOneWindow(self, layman_with_workspaces):
+        """Workspaces with < 2 windows should not get master width re-applied."""
+        layman, mgr7, mgr4 = layman_with_workspaces
+
+        tree = MockCon(
+            type="root",
+            nodes=[MockCon(type="output", nodes=[
+                create_workspace(name="7", window_count=8),
+                create_workspace(name="4", window_count=1),
+            ])],
+        )
+
+        layman.onOutputChange(tree)
+
+        mgr4.setMasterWidth.assert_not_called()
+
+    def test_onOutputChange_skipsNonMasterStackWorkspace(self, layman_with_workspaces):
+        """Non-MasterStack workspaces should be skipped."""
+        layman, mgr7, mgr4 = layman_with_workspaces
+
+        tree = MockCon(
+            type="root",
+            nodes=[MockCon(type="output", nodes=[
+                create_workspace(name="7", window_count=8),
+                create_workspace(name="8", window_count=2),
+            ])],
+        )
+
+        layman.onOutputChange(tree)
+
+        # Workspace 8 has no layout manager, should not crash
     """Tests for recognizing Sway/i3 builtin layout names."""
 
     def test_builtinSwayLayouts(self):

@@ -29,7 +29,14 @@ from queue import SimpleQueue
 from typing import Any, cast
 
 import yaml
-from i3ipc import BindingEvent, Con, Connection, WindowEvent, WorkspaceEvent
+from i3ipc import (
+    BindingEvent,
+    Con,
+    Connection,
+    OutputEvent,
+    WindowEvent,
+    WorkspaceEvent,
+)
 from setproctitle import setproctitle
 
 from layman import config, utils
@@ -359,6 +366,24 @@ class Layman:
     def onWorkspaceInit(self, event: WorkspaceEvent):
         assert event.current is not None
         self.initWorkspace(event.current)
+
+    def onOutputChange(self, tree: Con):
+        """Re-apply master widths after an output change.
+
+        When a monitor disconnects/reconnects (e.g. KVM switch, input toggle),
+        Sway may reset window split proportions.  We re-apply the configured
+        master width for every managed MasterStack workspace so the layout
+        is restored.
+        """
+        workspaces = {ws.name: ws for ws in tree.workspaces()}
+        for ws_name, state in self.workspaceStates.items():
+            if isinstance(state.layoutManager, MasterStackLayoutManager):
+                mgr = state.layoutManager
+                if len(mgr.windowIds) >= 2 and ws_name in workspaces:
+                    mgr.setMasterWidth()
+                    self.log(
+                        f"Re-applied master width on workspace {ws_name} after output change"
+                    )
 
     """
     Binding Events
@@ -973,6 +998,11 @@ class Layman:
                         f"Handling binding event for command '{event.binding.command}'"
                     )
                     self.onBinding(event)
+                elif isinstance(event, OutputEvent):
+                    event = cast(OutputEvent, event)
+                    self.log(f"Handling output event (change='{event.change}')")
+                    tree = self.conn.get_tree()
+                    self.onOutputChange(tree)
                 elif isinstance(event, WindowEvent):
                     # Because the i3ipc.Con that comes with a WindowEvent does not contain the
                     # parents of the window the event is for, we need to make an IPC request to
